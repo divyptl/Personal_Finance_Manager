@@ -30,9 +30,6 @@ public class SmsReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        // ALARM 1: Does the app even wake up?
-        android.widget.Toast.makeText(context, "APP WOKE UP! Checking SMS...", android.widget.Toast.LENGTH_SHORT).show();
-
         Bundle bundle = intent.getExtras();
         if (bundle != null) {
             Object[] pdus = (Object[]) bundle.get("pdus");

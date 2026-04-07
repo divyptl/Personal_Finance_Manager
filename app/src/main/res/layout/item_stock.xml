@@ -4,71 +4,128 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="16dp"
-    android:layout_marginTop="8dp"
-    android:layout_marginBottom="4dp"
+    android:layout_marginTop="6dp"
+    android:layout_marginBottom="2dp"
     app:cardBackgroundColor="@color/bg_card"
-    app:cardCornerRadius="12dp"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="0dp"
     app:strokeColor="@color/bg_card_stroke"
     app:strokeWidth="1dp">
 
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- Left Side: Ticker & Quantity -->
-        <TextView
-            android:id="@+id/tvTicker"
-            android:layout_width="wrap_content"
+        <!-- Row 1: Ticker + Live Price -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvTicker"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="RELIANCE"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/tvBroker"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/bg_chip"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp"
+                    android:text="MANUAL"
+                    android:textColor="@color/accent_purple"
+                    android:textSize="9sp"
+                    android:textAllCaps="true" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvLivePrice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:fontFamily="sans-serif-medium"
+                android:text="--"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp" />
+        </RelativeLayout>
+
+        <!-- Row 2: Holdings + P&L -->
+        <RelativeLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="RELIANCE"
-            android:textColor="#FFFFFF"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:layout_marginTop="8dp">
 
-        <TextView
-            android:id="@+id/tvHoldings"
-            android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvHoldings"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 shares"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="6dp"
+                    android:text="\u00B7"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/tvInvested"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Avg: \u20B90.00"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvPnL"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:text="\u20B90.00 (0.00%)"
+                android:textColor="@color/accent_green"
+                android:textSize="13sp" />
+        </RelativeLayout>
+
+        <!-- Row 3: Current Value -->
+        <RelativeLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@id/tvTicker"
-            android:layout_marginTop="4dp"
-            android:text="Qty: 0"
-            android:textColor="#B0B0B0"
-            android:textSize="14sp" />
+            android:layout_marginTop="4dp">
 
-        <TextView
-            android:id="@+id/tvInvested"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/tvHoldings"
-            android:layout_marginTop="2dp"
-            android:text="Invested: ₹0.00"
-            android:textColor="#B0B0B0"
-            android:textSize="14sp" />
+            <TextView
+                android:id="@+id/tvCurrentVal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:text="\u20B90.00"
+                android:textColor="@color/text_tertiary"
+                android:textSize="12sp" />
+        </RelativeLayout>
 
-        <!-- Right Side: Live Price & Profit/Loss -->
-        <TextView
-            android:id="@+id/tvLivePrice"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:text="LTP: ₹0.00"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tvPnL"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/tvLivePrice"
-            android:layout_alignParentEnd="true"
-            android:layout_marginTop="4dp"
-            android:text="₹0.00 (0.00%)"
-            android:textColor="#4CAF50"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-    </RelativeLayout>
-
+    </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

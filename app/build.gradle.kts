@@ -59,4 +59,10 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
 
     implementation("dev.samstevens.totp:totp:1.7.1")
+
+    // PDF Parsing (for CAS Statement extraction)
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+
+    // ViewPager2 for swipe indicators
+    implementation("androidx.viewpager2:viewpager2:1.1.0")
 }

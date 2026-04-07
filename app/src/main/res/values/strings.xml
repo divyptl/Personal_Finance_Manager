@@ -1,3 +1,44 @@
 <resources>
-    <string name="app_name">Personal Finance Manager</string>
+    <string name="app_name">WealthFlow</string>
+
+    <!-- Main Screen -->
+    <string name="label_personal_finance">PERSONAL FINANCE</string>
+    <string name="label_wealth_manager">Wealth Manager</string>
+    <string name="label_total_expenses">Total Expenses</string>
+    <string name="label_invested_net_worth">Invested Net Worth</string>
+    <string name="label_recent_transactions">Recent Transactions</string>
+    <string name="label_view_portfolio">View Stock Portfolio</string>
+    <string name="label_no_transactions">No transactions yet</string>
+    <string name="label_sms_hint">Transactions from bank SMS will appear here</string>
+
+    <!-- Portfolio Screen -->
+    <string name="label_portfolio">Portfolio</string>
+    <string name="label_total_invested">Total Invested</string>
+    <string name="label_current_value">Current Value</string>
+    <string name="label_total_pnl">Total P&amp;L</string>
+    <string name="label_no_stocks">No stocks in portfolio</string>
+    <string name="label_add_stock_hint">Tap + to add stocks manually, import from CAS, or sync with Angel One</string>
+
+    <!-- Bottom Sheet -->
+    <string name="label_add_to_portfolio">Add to Portfolio</string>
+    <string name="label_manual_entry">Manual Entry</string>
+    <string name="label_manual_entry_desc">Add a stock by entering ticker, quantity, and price</string>
+    <string name="label_upload_cas">Upload CAS Statement</string>
+    <string name="label_upload_cas_desc">Import holdings from NSDL/CDSL PDF</string>
+    <string name="label_sync_angel">Sync Angel One</string>
+    <string name="label_sync_angel_desc">Pull live holdings from your Angel One account</string>
+
+    <!-- Dialogs -->
+    <string name="label_stock_ticker">Stock Ticker (e.g., RELIANCE)</string>
+    <string name="label_quantity">Quantity</string>
+    <string name="label_avg_price">Average Buy Price (\u20B9)</string>
+    <string name="label_api_key">API Key</string>
+    <string name="label_client_code">Client Code</string>
+    <string name="label_pin">PIN</string>
+    <string name="label_totp_secret">TOTP Secret</string>
+    <string name="label_pdf_password_hint">Enter PAN or password</string>
+
+    <!-- Formats -->
+    <string name="format_currency">\u20B9%s</string>
+    <string name="format_zero">\u20B90.00</string>
 </resources>
