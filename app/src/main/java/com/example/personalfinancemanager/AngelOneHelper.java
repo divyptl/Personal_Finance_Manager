@@ -4,7 +4,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
-import dev.samstevens.totp.code.DefaultCodeGenerator;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -28,6 +27,7 @@ public class AngelOneHelper {
 
     private static final String TAG = "AngelOne";
     private static final String BASE_URL = "https://apiconnect.angelbroking.com";
+    private static final String API_KEY = "YGWfQ7oP";
 
     private static final OkHttpClient client = new OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
@@ -36,13 +36,12 @@ public class AngelOneHelper {
 
     private static String jwtToken = "";
     private static long tokenTimestamp = 0;
-    private static final long TOKEN_VALIDITY_MS = 23 * 60 * 60 * 1000L; // 23 hours
+    private static final long TOKEN_VALIDITY_MS = 23 * 60 * 60 * 1000L;
+    private static boolean tokenLoaded = false;
 
-    // Credentials loaded from CredentialManager
-    private final String apiKey;
     private final String clientCode;
     private final String pin;
-    private final String totpSecret;
+    private final CredentialManager credentialManager;
 
     public interface StockPriceCallback {
         void onPriceFetched(double livePrice);
@@ -62,15 +61,41 @@ public class AngelOneHelper {
     }
 
     public AngelOneHelper(CredentialManager credentialManager) {
-        this.apiKey = credentialManager.getApiKey();
+        this.credentialManager = credentialManager;
         this.clientCode = credentialManager.getClientCode();
         this.pin = credentialManager.getPin();
-        this.totpSecret = credentialManager.getTotpSecret();
+
+        // Load persisted token once per app session
+        if (!tokenLoaded) {
+            String savedToken = credentialManager.getToken();
+            long savedTimestamp = credentialManager.getTokenTimestamp();
+            if (!savedToken.isEmpty() && savedTimestamp > 0) {
+                jwtToken = savedToken;
+                tokenTimestamp = savedTimestamp;
+            }
+            tokenLoaded = true;
+        }
     }
 
-    private boolean isTokenValid() {
+    public static boolean isTokenValid() {
         return !jwtToken.isEmpty()
                 && (System.currentTimeMillis() - tokenTimestamp) < TOKEN_VALIDITY_MS;
+    }
+
+    /**
+     * Call this from PortfolioActivity.onCreate to load persisted token
+     * before any isTokenValid() checks.
+     */
+    public static void loadPersistedToken(CredentialManager cm) {
+        if (!tokenLoaded) {
+            String savedToken = cm.getToken();
+            long savedTimestamp = cm.getTokenTimestamp();
+            if (!savedToken.isEmpty() && savedTimestamp > 0) {
+                jwtToken = savedToken;
+                tokenTimestamp = savedTimestamp;
+            }
+            tokenLoaded = true;
+        }
     }
 
     private Request.Builder addStandardHeaders(Request.Builder builder) {
@@ -82,29 +107,24 @@ public class AngelOneHelper {
                 .addHeader("X-ClientLocalIP", "127.0.0.1")
                 .addHeader("X-ClientPublicIP", "127.0.0.1")
                 .addHeader("X-MACAddress", "00:00:00:00:00:00")
-                .addHeader("X-PrivateKey", apiKey);
+                .addHeader("X-PrivateKey", API_KEY);
     }
 
-    // --- AUTHENTICATION ---
+    // --- AUTHENTICATION (takes 6-digit OTP from Google Authenticator) ---
 
-    public void authenticate(AuthCallback callback) {
+    public void authenticate(String otpCode, AuthCallback callback) {
         if (isTokenValid()) {
             callback.onSuccess();
             return;
         }
 
-        // Force re-auth
         jwtToken = "";
 
         try {
-            DefaultCodeGenerator codeGenerator = new DefaultCodeGenerator();
-            long currentBucket = System.currentTimeMillis() / 1000 / 30;
-            String currentTotp = codeGenerator.generate(totpSecret, currentBucket);
-
             JSONObject bodyJson = new JSONObject();
             bodyJson.put("clientcode", clientCode);
             bodyJson.put("password", pin);
-            bodyJson.put("totp", currentTotp);
+            bodyJson.put("totp", otpCode);
 
             RequestBody body = RequestBody.create(
                     bodyJson.toString(), MediaType.get("application/json; charset=utf-8"));
@@ -132,6 +152,10 @@ public class AngelOneHelper {
                         if (json.getBoolean("status")) {
                             jwtToken = json.getJSONObject("data").getString("jwtToken");
                             tokenTimestamp = System.currentTimeMillis();
+
+                            // Persist token so it survives app restarts
+                            credentialManager.saveToken(jwtToken, tokenTimestamp);
+
                             postToMain(callback::onSuccess);
                         } else {
                             String msg = json.optString("message", "Authentication failed");
@@ -144,64 +168,58 @@ public class AngelOneHelper {
                 }
             });
         } catch (Exception e) {
-            Log.e(TAG, "TOTP generation failed", e);
-            callback.onFailure("TOTP error: " + e.getMessage());
+            Log.e(TAG, "Auth request failed", e);
+            callback.onFailure("Request error: " + e.getMessage());
         }
     }
 
-    // --- FETCH HOLDINGS ---
+    // --- FETCH HOLDINGS (requires valid token) ---
 
     public void fetchMyHoldings(HoldingsCallback callback) {
-        authenticate(new AuthCallback() {
+        if (!isTokenValid()) {
+            Log.e(TAG, "Cannot fetch holdings: not authenticated");
+            return;
+        }
+
+        Request request = addStandardHeaders(new Request.Builder())
+                .url(BASE_URL + "/rest/secure/angelbroking/portfolio/v1/getHolding")
+                .addHeader("Authorization", "Bearer " + jwtToken)
+                .get()
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
             @Override
-            public void onSuccess() {
-                Request request = addStandardHeaders(new Request.Builder())
-                        .url(BASE_URL + "/rest/secure/angelbroking/portfolio/v1/getHolding")
-                        .addHeader("Authorization", "Bearer " + jwtToken)
-                        .get()
-                        .build();
-
-                client.newCall(request).enqueue(new Callback() {
-                    @Override
-                    public void onFailure(Call call, IOException e) {
-                        Log.e(TAG, "Holdings fetch failed", e);
-                    }
-
-                    @Override
-                    public void onResponse(Call call, Response response) throws IOException {
-                        if (!response.isSuccessful() || response.body() == null) return;
-                        try {
-                            JSONObject json = new JSONObject(response.body().string());
-                            if (json.getBoolean("status") && !json.isNull("data")) {
-                                JSONArray array = json.getJSONArray("data");
-                                List<Stock> portfolio = new ArrayList<>();
-
-                                for (int i = 0; i < array.length(); i++) {
-                                    JSONObject item = array.getJSONObject(i);
-                                    String symbol = item.getString("tradingsymbol").replace("-EQ", "");
-                                    String token = item.getString("symboltoken");
-                                    double qty = item.getDouble("quantity");
-                                    double avgPrice = item.getDouble("averageprice");
-
-                                    portfolio.add(new Stock(symbol, token, qty, avgPrice, "AngelOne"));
-                                }
-                                postToMain(() -> callback.onHoldingsFetched(portfolio));
-                            }
-                        } catch (Exception e) {
-                            Log.e(TAG, "Holdings parse error", e);
-                        }
-                    }
-                });
+            public void onFailure(Call call, IOException e) {
+                Log.e(TAG, "Holdings fetch failed", e);
             }
 
             @Override
-            public void onFailure(String error) {
-                Log.e(TAG, "Auth failed before holdings fetch: " + error);
+            public void onResponse(Call call, Response response) throws IOException {
+                if (!response.isSuccessful() || response.body() == null) return;
+                try {
+                    JSONObject json = new JSONObject(response.body().string());
+                    if (json.getBoolean("status") && !json.isNull("data")) {
+                        JSONArray array = json.getJSONArray("data");
+                        List<Stock> portfolio = new ArrayList<>();
+
+                        for (int i = 0; i < array.length(); i++) {
+                            JSONObject item = array.getJSONObject(i);
+                            String symbol = item.getString("tradingsymbol").replace("-EQ", "");
+                            String token = item.getString("symboltoken");
+                            double qty = item.getDouble("quantity");
+                            double avgPrice = item.getDouble("averageprice");
+                            portfolio.add(new Stock(symbol, token, qty, avgPrice, "AngelOne"));
+                        }
+                        postToMain(() -> callback.onHoldingsFetched(portfolio));
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Holdings parse error", e);
+                }
             }
         });
     }
 
-    // --- BATCH LTP FETCH (All stocks at once) ---
+    // --- BATCH LTP FETCH ---
 
     public void fetchBatchLtp(List<Stock> stocks, BatchLtpCallback callback) {
         if (stocks == null || stocks.isEmpty()) {
@@ -209,7 +227,11 @@ public class AngelOneHelper {
             return;
         }
 
-        // Filter stocks that have a valid symbol token
+        if (!isTokenValid()) {
+            callback.onPricesFetched(new HashMap<>());
+            return;
+        }
+
         List<Stock> fetchable = new ArrayList<>();
         for (Stock s : stocks) {
             if (s.getSymbolToken() != null
@@ -224,35 +246,20 @@ public class AngelOneHelper {
             return;
         }
 
-        authenticate(new AuthCallback() {
-            @Override
-            public void onSuccess() {
-                Map<String, Double> priceMap = new HashMap<>();
-                AtomicInteger remaining = new AtomicInteger(fetchable.size());
+        Map<String, Double> priceMap = new HashMap<>();
+        AtomicInteger remaining = new AtomicInteger(fetchable.size());
 
-                for (Stock stock : fetchable) {
-                    fetchSingleLtp(stock.getTicker(), stock.getSymbolToken(), price -> {
-                        synchronized (priceMap) {
-                            if (price > 0) {
-                                priceMap.put(stock.getTicker(), price);
-                            }
-                        }
-                        if (remaining.decrementAndGet() == 0) {
-                            postToMain(() -> callback.onPricesFetched(priceMap));
-                        }
-                    });
+        for (Stock stock : fetchable) {
+            fetchSingleLtp(stock.getTicker(), stock.getSymbolToken(), price -> {
+                synchronized (priceMap) {
+                    if (price > 0) priceMap.put(stock.getTicker(), price);
                 }
-            }
-
-            @Override
-            public void onFailure(String error) {
-                Log.e(TAG, "Auth failed before batch LTP: " + error);
-                postToMain(() -> callback.onPricesFetched(new HashMap<>()));
-            }
-        });
+                if (remaining.decrementAndGet() == 0) {
+                    postToMain(() -> callback.onPricesFetched(priceMap));
+                }
+            });
+        }
     }
-
-    // --- SINGLE LTP FETCH (internal, no auth check) ---
 
     private void fetchSingleLtp(String ticker, String stockToken, StockPriceCallback callback) {
         try {
@@ -273,7 +280,6 @@ public class AngelOneHelper {
             client.newCall(request).enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
-                    Log.e(TAG, "LTP failed for " + ticker, e);
                     callback.onPriceFetched(0);
                 }
 
@@ -286,43 +292,29 @@ public class AngelOneHelper {
                     try {
                         JSONObject json = new JSONObject(response.body().string());
                         if (json.getBoolean("status")) {
-                            double ltp = json.getJSONObject("data").getDouble("ltp");
-                            callback.onPriceFetched(ltp);
+                            callback.onPriceFetched(json.getJSONObject("data").getDouble("ltp"));
                         } else {
                             callback.onPriceFetched(0);
                         }
                     } catch (Exception e) {
-                        Log.e(TAG, "LTP parse error for " + ticker, e);
                         callback.onPriceFetched(0);
                     }
                 }
             });
         } catch (Exception e) {
-            Log.e(TAG, "LTP request build error", e);
             callback.onPriceFetched(0);
         }
-    }
-
-    // --- PUBLIC SINGLE LTP (for on-demand refresh) ---
-
-    public void loginAndFetchPrice(String ticker, String stockToken, StockPriceCallback callback) {
-        authenticate(new AuthCallback() {
-            @Override
-            public void onSuccess() {
-                fetchSingleLtp(ticker, stockToken, price ->
-                        postToMain(() -> callback.onPriceFetched(price)));
-            }
-
-            @Override
-            public void onFailure(String error) {
-                Log.e(TAG, "Auth failed: " + error);
-            }
-        });
     }
 
     public static void invalidateToken() {
         jwtToken = "";
         tokenTimestamp = 0;
+        tokenLoaded = false;
+    }
+
+    public static void invalidateToken(CredentialManager cm) {
+        invalidateToken();
+        cm.clearToken();
     }
 
     private static void postToMain(Runnable action) {

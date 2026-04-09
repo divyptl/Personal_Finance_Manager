@@ -2,8 +2,6 @@ package com.example.personalfinancemanager;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.GestureDetector;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -155,25 +153,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupSwipeListener() {
         View cardBalance = findViewById(R.id.cardBalance);
-        GestureDetector gestureDetector = new GestureDetector(this,
-                new GestureDetector.SimpleOnGestureListener() {
-                    @Override
-                    public boolean onFling(MotionEvent e1, MotionEvent e2,
-                                           float velocityX, float velocityY) {
-                        if (e1 == null || e2 == null) return false;
-                        float diffX = e2.getX() - e1.getX();
-                        if (Math.abs(diffX) > 100) {
-                            isShowingPortfolio = !isShowingPortfolio;
-                            updateCardDisplay();
-                            return true;
-                        }
-                        return false;
-                    }
-                });
-
-        cardBalance.setOnTouchListener((v, event) -> {
-            gestureDetector.onTouchEvent(event);
-            return true;
+        // Tap to toggle between Expenses and Net Worth
+        // (swipe gestures conflict with NestedScrollView scrolling)
+        cardBalance.setOnClickListener(v -> {
+            isShowingPortfolio = !isShowingPortfolio;
+            updateCardDisplay();
         });
     }
 
@@ -182,7 +166,7 @@ public class MainActivity extends AppCompatActivity {
             textCardTitle.setText(R.string.label_total_expenses);
             textTotalBalance.setText(String.format(Locale.getDefault(), "\u20B9%.2f", currentMonthExpenses));
             textTotalBalance.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
-            textSwipeHint.setText("\u25CF  \u25CB");
+            textSwipeHint.setText("Tap to view net worth");
         } else {
             textCardTitle.setText(R.string.label_invested_net_worth);
             double netWorth = totalPortfolioInvested - currentMonthExpenses;
@@ -190,7 +174,7 @@ public class MainActivity extends AppCompatActivity {
 
             int color = netWorth >= 0 ? R.color.accent_green : R.color.accent_red;
             textTotalBalance.setTextColor(ContextCompat.getColor(this, color));
-            textSwipeHint.setText("\u25CB  \u25CF");
+            textSwipeHint.setText("Tap to view expenses");
         }
     }
 

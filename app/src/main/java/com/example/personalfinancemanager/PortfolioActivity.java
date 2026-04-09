@@ -3,12 +3,10 @@ package com.example.personalfinancemanager;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.InputType;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -44,6 +42,7 @@ public class PortfolioActivity extends AppCompatActivity {
     private View emptyState;
 
     private List<Stock> currentStocks;
+    private double lastTotalInvested = 0;
 
     private final ActivityResultLauncher<Intent> pdfPickerLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -60,10 +59,9 @@ public class PortfolioActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_portfolio);
 
-        // Initialize PDFBox
         PDFBoxResourceLoader.init(getApplicationContext());
-
         credentialManager = new CredentialManager(this);
+        AngelOneHelper.loadPersistedToken(credentialManager);
 
         // Link UI
         tvTotalInvested = findViewById(R.id.tvTotalInvested);
@@ -83,16 +81,14 @@ public class PortfolioActivity extends AppCompatActivity {
         adapter = new StockAdapter();
         recyclerView.setAdapter(adapter);
 
-        // Long-click to delete stock
+        // Long-click to delete
         adapter.setOnStockLongClickListener((stock, position) -> {
             new AlertDialog.Builder(this)
                     .setTitle("Remove " + stock.getTicker() + "?")
                     .setMessage("This will remove the stock from your portfolio.")
-                    .setPositiveButton("Remove", (d, w) -> {
-                        StockRepository repo = new StockRepository(getApplication());
-                        AppDatabase.databaseWriteExecutor.execute(() ->
-                                AppDatabase.getDatabase(this).stockDao().deleteStock(stock.getTicker()));
-                    })
+                    .setPositiveButton("Remove", (d, w) ->
+                            AppDatabase.databaseWriteExecutor.execute(() ->
+                                    AppDatabase.getDatabase(this).stockDao().deleteStock(stock.getTicker())))
                     .setNegativeButton("Cancel", null)
                     .show();
         });
@@ -104,22 +100,19 @@ public class PortfolioActivity extends AppCompatActivity {
             currentStocks = stocks;
             adapter.setStocks(stocks);
 
-            // Show/hide empty state
-            if (stocks == null || stocks.isEmpty()) {
-                emptyState.setVisibility(View.VISIBLE);
-            } else {
-                emptyState.setVisibility(View.GONE);
-            }
+            emptyState.setVisibility(stocks == null || stocks.isEmpty() ? View.VISIBLE : View.GONE);
 
-            // Calculate totals from DB
             double totalInvested = 0.0;
-            for (Stock s : stocks) {
-                totalInvested += (s.getQuantity() * s.getAverageBuyPrice());
+            if (stocks != null) {
+                for (Stock s : stocks) {
+                    totalInvested += (s.getQuantity() * s.getAverageBuyPrice());
+                }
             }
+            lastTotalInvested = totalInvested;
             tvTotalInvested.setText(formatCurrency(totalInvested));
 
-            // Fetch live prices if Angel One is configured
-            if (credentialManager.isConfigured() && !stocks.isEmpty()) {
+            // Fetch live prices if authenticated
+            if (AngelOneHelper.isTokenValid() && stocks != null && !stocks.isEmpty()) {
                 fetchLivePrices(stocks, totalInvested);
             } else {
                 tvCurrentValue.setText(formatCurrency(totalInvested));
@@ -128,17 +121,178 @@ public class PortfolioActivity extends AppCompatActivity {
             }
         });
 
-        // Button clicks
+        // Buttons
         btnBack.setOnClickListener(v -> finish());
-
         btnSync.setOnClickListener(v -> syncAngelOneHoldings());
-
-        btnSettings.setOnClickListener(v -> showCredentialsDialog());
-
+        btnSettings.setOnClickListener(v -> showAccountDialog());
         fabAddStock.setOnClickListener(v -> showAddOptionsSheet());
     }
 
-    // --- LIVE PRICE FETCHING ---
+    // ==================== ANGEL ONE AUTH FLOW ====================
+
+    /**
+     * Shows OTP dialog, authenticates, then runs the action on success.
+     * This is the ONLY place that asks for OTP.
+     */
+    private void promptOtpThenRun(Runnable onAuthenticated) {
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_otp, null);
+        EditText inputOtp = dialogView.findViewById(R.id.inputOtp);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Enter OTP")
+                .setMessage("Open Google Authenticator and enter the 6-digit code for Angel One.")
+                .setView(dialogView)
+                .setPositiveButton("Verify", (dialog, which) -> {
+                    String otp = inputOtp.getText().toString().trim();
+                    if (otp.length() != 6) {
+                        Toast.makeText(this, "Enter a valid 6-digit OTP", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    showSyncProgress(true);
+                    AngelOneHelper helper = new AngelOneHelper(credentialManager);
+                    helper.authenticate(otp, new AngelOneHelper.AuthCallback() {
+                        @Override
+                        public void onSuccess() {
+                            showSyncProgress(false);
+                            onAuthenticated.run();
+                        }
+
+                        @Override
+                        public void onFailure(String error) {
+                            showSyncProgress(false);
+                            Toast.makeText(PortfolioActivity.this,
+                                    "Login failed: " + error, Toast.LENGTH_LONG).show();
+                        }
+                    });
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    /**
+     * Ensures we're authenticated, then runs the action.
+     * If token is valid → runs immediately.
+     * If token expired → shows OTP dialog first.
+     */
+    private void ensureAuthThenRun(Runnable action) {
+        if (!credentialManager.isConfigured()) {
+            showLoginDialog(action);
+            return;
+        }
+
+        if (AngelOneHelper.isTokenValid()) {
+            action.run();
+        } else {
+            promptOtpThenRun(action);
+        }
+    }
+
+    // ==================== LOGIN (first time only) ====================
+
+    private void showLoginDialog(Runnable onLoginComplete) {
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_login, null);
+        EditText inputClientCode = dialogView.findViewById(R.id.inputClientCode);
+        EditText inputPin = dialogView.findViewById(R.id.inputPin);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Login to Angel One")
+                .setMessage("Enter your Angel One account details. These are saved for future sessions.")
+                .setView(dialogView)
+                .setPositiveButton("Continue", (dialog, which) -> {
+                    String clientCode = inputClientCode.getText().toString().trim();
+                    String pin = inputPin.getText().toString().trim();
+
+                    if (clientCode.isEmpty() || pin.isEmpty()) {
+                        Toast.makeText(this, "Both fields are required", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    // Save client code + PIN
+                    credentialManager.save(clientCode, pin);
+                    AngelOneHelper.invalidateToken(credentialManager);
+
+                    // Now ask for OTP
+                    if (onLoginComplete != null) {
+                        promptOtpThenRun(onLoginComplete);
+                    } else {
+                        promptOtpThenRun(() ->
+                                Toast.makeText(this, "Connected to Angel One!", Toast.LENGTH_SHORT).show());
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .setNeutralButton("Need Help?", (dialog, which) -> showSetup2faHelp())
+                .show();
+    }
+
+    private void showSetup2faHelp() {
+        new AlertDialog.Builder(this)
+                .setTitle("Set Up Google Authenticator")
+                .setMessage("You need to enable 2FA on your Angel One account first.\n\n" +
+                        "1. Open Angel One website\n" +
+                        "2. Go to Settings → Security\n" +
+                        "3. Enable Two-Factor Auth & scan QR code with Google Authenticator app\n" +
+                        "4. Come back and log in here")
+                .setPositiveButton("Open Angel One", (d, w) -> {
+                    Intent intent = new Intent(Intent.ACTION_VIEW);
+                    intent.setData(Uri.parse("https://www.angelbroking.com/"));
+                    startActivity(intent);
+                })
+                .setNegativeButton("Got It", null)
+                .show();
+    }
+
+    // ==================== ACCOUNT SETTINGS ====================
+
+    private void showAccountDialog() {
+        if (credentialManager.isConfigured()) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Angel One Account")
+                    .setMessage("Logged in as: " + credentialManager.getClientCode())
+                    .setPositiveButton("Logout", (d, w) -> {
+                        credentialManager.clear();
+                        AngelOneHelper.invalidateToken(credentialManager);
+                        Toast.makeText(this, "Logged out", Toast.LENGTH_SHORT).show();
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        } else {
+            showLoginDialog(null);
+        }
+    }
+
+    // ==================== SYNC HOLDINGS ====================
+
+    private void syncAngelOneHoldings() {
+        ensureAuthThenRun(() -> {
+            showSyncProgress(true);
+            Toast.makeText(this, "Syncing holdings...", Toast.LENGTH_SHORT).show();
+
+            AngelOneHelper helper = new AngelOneHelper(credentialManager);
+            helper.fetchMyHoldings(holdings -> {
+                showSyncProgress(false);
+                if (holdings.isEmpty()) {
+                    Toast.makeText(this, "No holdings found", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                for (Stock stock : holdings) {
+                    stockViewModel.buyStock(
+                            stock.getTicker(),
+                            stock.getSymbolToken(),
+                            stock.getQuantity(),
+                            stock.getAverageBuyPrice(),
+                            "AngelOne"
+                    );
+                }
+
+                Toast.makeText(this,
+                        holdings.size() + " stocks synced!", Toast.LENGTH_SHORT).show();
+            });
+        });
+    }
+
+    // ==================== LIVE PRICES ====================
 
     private void fetchLivePrices(List<Stock> stocks, double totalInvested) {
         showSyncProgress(true);
@@ -147,61 +301,27 @@ public class PortfolioActivity extends AppCompatActivity {
         helper.fetchBatchLtp(stocks, priceMap -> {
             showSyncProgress(false);
             adapter.setPrices(priceMap);
-
-            double currentValue = adapter.getTotalCurrentValue();
-            double pnl = currentValue - totalInvested;
-            double pnlPercent = totalInvested > 0 ? (pnl / totalInvested) * 100 : 0;
-
-            tvCurrentValue.setText(formatCurrency(currentValue));
-            tvTotalPnl.setText(String.format(Locale.getDefault(), "%s\u20B9%.2f",
-                    pnl >= 0 ? "+" : "", pnl));
-            tvPnlPercent.setText(String.format(Locale.getDefault(), "(%.2f%%)", pnlPercent));
-
-            int color = pnl >= 0
-                    ? getColor(R.color.accent_green)
-                    : getColor(R.color.accent_red);
-            tvTotalPnl.setTextColor(color);
-            tvPnlPercent.setTextColor(color);
-            tvCurrentValue.setTextColor(color);
+            updatePnlSummary(totalInvested);
         });
     }
 
-    // --- ANGEL ONE SYNC ---
+    private void updatePnlSummary(double totalInvested) {
+        double currentValue = adapter.getTotalCurrentValue();
+        double pnl = currentValue - totalInvested;
+        double pnlPercent = totalInvested > 0 ? (pnl / totalInvested) * 100 : 0;
 
-    private void syncAngelOneHoldings() {
-        if (!credentialManager.isConfigured()) {
-            showCredentialsDialog();
-            return;
-        }
+        tvCurrentValue.setText(formatCurrency(currentValue));
+        tvTotalPnl.setText(String.format(Locale.getDefault(), "%s\u20B9%.2f",
+                pnl >= 0 ? "+" : "", pnl));
+        tvPnlPercent.setText(String.format(Locale.getDefault(), "(%.2f%%)", pnlPercent));
 
-        showSyncProgress(true);
-        Toast.makeText(this, "Syncing with Angel One...", Toast.LENGTH_SHORT).show();
-
-        AngelOneHelper helper = new AngelOneHelper(credentialManager);
-        helper.fetchMyHoldings(holdings -> {
-            showSyncProgress(false);
-            if (holdings.isEmpty()) {
-                Toast.makeText(this, "No holdings found", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            for (Stock stock : holdings) {
-                stockViewModel.buyStock(
-                        stock.getTicker(),
-                        stock.getSymbolToken(),
-                        stock.getQuantity(),
-                        stock.getAverageBuyPrice(),
-                        "AngelOne"
-                );
-            }
-
-            Toast.makeText(this,
-                    holdings.size() + " stocks synced from Angel One",
-                    Toast.LENGTH_SHORT).show();
-        });
+        int color = pnl >= 0 ? getColor(R.color.accent_green) : getColor(R.color.accent_red);
+        tvTotalPnl.setTextColor(color);
+        tvPnlPercent.setTextColor(color);
+        tvCurrentValue.setTextColor(color);
     }
 
-    // --- ADD OPTIONS BOTTOM SHEET ---
+    // ==================== ADD OPTIONS ====================
 
     private void showAddOptionsSheet() {
         BottomSheetDialog sheet = new BottomSheetDialog(this);
@@ -226,7 +346,7 @@ public class PortfolioActivity extends AppCompatActivity {
         sheet.show();
     }
 
-    // --- MANUAL STOCK ENTRY ---
+    // ==================== MANUAL ENTRY ====================
 
     private void showManualEntryDialog() {
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_manual_stock, null);
@@ -251,7 +371,6 @@ public class PortfolioActivity extends AppCompatActivity {
                     try {
                         double quantity = Double.parseDouble(qtyStr);
                         double price = Double.parseDouble(priceStr);
-
                         stockViewModel.buyStock(ticker, "N/A", quantity, price, "MANUAL");
                         Toast.makeText(this, ticker + " added!", Toast.LENGTH_SHORT).show();
                     } catch (NumberFormatException e) {
@@ -262,7 +381,7 @@ public class PortfolioActivity extends AppCompatActivity {
                 .show();
     }
 
-    // --- PDF UPLOAD FLOW ---
+    // ==================== PDF UPLOAD ====================
 
     private void startPdfUploadFlow() {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
@@ -287,9 +406,7 @@ public class PortfolioActivity extends AppCompatActivity {
                     String password = inputPassword.getText().toString().trim();
                     parseCasPdf(pdfUri, password);
                 })
-                .setNegativeButton("No Password", (dialog, which) -> {
-                    parseCasPdf(pdfUri, null);
-                })
+                .setNegativeButton("No Password", (dialog, which) -> parseCasPdf(pdfUri, null))
                 .show();
     }
 
@@ -313,38 +430,32 @@ public class PortfolioActivity extends AppCompatActivity {
                 if (parsedStocks.isEmpty()) {
                     runOnUiThread(() -> {
                         showSyncProgress(false);
-                        Toast.makeText(this, "No stocks found in the PDF. Ensure it's a valid CAS statement.", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "No stocks found in the PDF.", Toast.LENGTH_LONG).show();
                     });
                     return;
                 }
 
-                // Save all parsed stocks to DB
                 for (Stock stock : parsedStocks) {
                     stockViewModel.buyStock(
-                            stock.getTicker(),
-                            stock.getSymbolToken(),
-                            stock.getQuantity(),
-                            stock.getAverageBuyPrice(),
-                            "CAS"
-                    );
+                            stock.getTicker(), stock.getSymbolToken(),
+                            stock.getQuantity(), stock.getAverageBuyPrice(), "CAS");
                 }
 
                 runOnUiThread(() -> {
                     showSyncProgress(false);
                     Toast.makeText(this,
-                            parsedStocks.size() + " stocks imported from CAS!",
-                            Toast.LENGTH_SHORT).show();
+                            parsedStocks.size() + " stocks imported from CAS!", Toast.LENGTH_SHORT).show();
                 });
 
             } catch (Exception e) {
                 Log.e(TAG, "PDF parsing failed", e);
-                String errorMsg = e.getMessage();
-                if (errorMsg != null && errorMsg.contains("password")) {
-                    errorMsg = "Incorrect password. CAS PDFs are typically protected with your PAN.";
+                String msg = e.getMessage();
+                if (msg != null && msg.contains("password")) {
+                    msg = "Incorrect password. CAS PDFs are typically protected with your PAN.";
                 } else {
-                    errorMsg = "Failed to parse PDF: " + errorMsg;
+                    msg = "Failed to parse PDF: " + msg;
                 }
-                String finalMsg = errorMsg;
+                String finalMsg = msg;
                 runOnUiThread(() -> {
                     showSyncProgress(false);
                     Toast.makeText(this, finalMsg, Toast.LENGTH_LONG).show();
@@ -353,68 +464,7 @@ public class PortfolioActivity extends AppCompatActivity {
         });
     }
 
-    // --- CREDENTIALS DIALOG ---
-
-    private void showCredentialsDialog() {
-        View dialogView = getLayoutInflater().inflate(R.layout.dialog_credentials, null);
-
-        EditText inputApiKey = dialogView.findViewById(R.id.inputApiKey);
-        EditText inputClientCode = dialogView.findViewById(R.id.inputClientCode);
-        EditText inputPin = dialogView.findViewById(R.id.inputPin);
-        EditText inputTotp = dialogView.findViewById(R.id.inputTotpSecret);
-
-        // Pre-fill existing credentials
-        if (credentialManager.isConfigured()) {
-            inputApiKey.setText(credentialManager.getApiKey());
-            inputClientCode.setText(credentialManager.getClientCode());
-            inputPin.setText(credentialManager.getPin());
-            inputTotp.setText(credentialManager.getTotpSecret());
-        }
-
-        new AlertDialog.Builder(this)
-                .setTitle("Angel One Credentials")
-                .setView(dialogView)
-                .setPositiveButton("Save", (dialog, which) -> {
-                    String apiKey = inputApiKey.getText().toString().trim();
-                    String clientCode = inputClientCode.getText().toString().trim();
-                    String pin = inputPin.getText().toString().trim();
-                    String totp = inputTotp.getText().toString().trim();
-
-                    if (apiKey.isEmpty() || clientCode.isEmpty() || pin.isEmpty() || totp.isEmpty()) {
-                        Toast.makeText(this, "All fields are required", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    credentialManager.save(apiKey, clientCode, pin, totp);
-                    AngelOneHelper.invalidateToken();
-                    Toast.makeText(this, "Credentials saved!", Toast.LENGTH_SHORT).show();
-
-                    // Test authentication
-                    AngelOneHelper helper = new AngelOneHelper(credentialManager);
-                    helper.authenticate(new AngelOneHelper.AuthCallback() {
-                        @Override
-                        public void onSuccess() {
-                            Toast.makeText(PortfolioActivity.this,
-                                    "Connected to Angel One!", Toast.LENGTH_SHORT).show();
-                        }
-
-                        @Override
-                        public void onFailure(String error) {
-                            Toast.makeText(PortfolioActivity.this,
-                                    "Auth test failed: " + error, Toast.LENGTH_LONG).show();
-                        }
-                    });
-                })
-                .setNegativeButton("Cancel", null)
-                .setNeutralButton("Clear", (dialog, which) -> {
-                    credentialManager.clear();
-                    AngelOneHelper.invalidateToken();
-                    Toast.makeText(this, "Credentials cleared", Toast.LENGTH_SHORT).show();
-                })
-                .show();
-    }
-
-    // --- UTILITIES ---
+    // ==================== UTILITIES ====================
 
     private void showSyncProgress(boolean show) {
         progressSync.setVisibility(show ? View.VISIBLE : View.GONE);
@@ -422,9 +472,9 @@ public class PortfolioActivity extends AppCompatActivity {
     }
 
     private String formatCurrency(double amount) {
-        if (amount >= 10000000) { // 1 Crore
+        if (amount >= 10000000) {
             return String.format(Locale.getDefault(), "\u20B9%.2f Cr", amount / 10000000);
-        } else if (amount >= 100000) { // 1 Lakh
+        } else if (amount >= 100000) {
             return String.format(Locale.getDefault(), "\u20B9%.2f L", amount / 100000);
         }
         return String.format(Locale.getDefault(), "\u20B9%.2f", amount);
