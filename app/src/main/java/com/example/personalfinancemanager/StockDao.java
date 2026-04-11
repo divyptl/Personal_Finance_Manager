@@ -15,4 +15,8 @@ public interface StockDao {
     androidx.lifecycle.LiveData<java.util.List<Stock>> getAllStocks();
     @Query("DELETE FROM stock_table WHERE ticker = :tickerSymbol")
     void deleteStock(String tickerSymbol);
+
+    /** Used by the "Delete all data" account-deletion flow. */
+    @Query("DELETE FROM stock_table")
+    void deleteAll();
 }

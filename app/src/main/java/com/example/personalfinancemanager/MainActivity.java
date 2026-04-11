@@ -12,6 +12,7 @@ import android.widget.ImageButton;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -37,8 +38,10 @@ import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final int REQ_NOTIFICATIONS = 1001;
+    private static final int REQ_SMS = 1002;
+
     private TransactionViewModel transactionViewModel;
-    private StockViewModel stockViewModel;
     private TransactionAdapter adapter;
 
     private TextView textTotalBalance, textCardTitle, textSwipeHint;
@@ -57,9 +60,13 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        requestNotificationPermission();
+        // Permission rationales — Play Store policy requires that we explain
+        // BEFORE prompting why we need each permission. We use AlertDialogs
+        // here as a lightweight pre-prompt; an in-app onboarding screen is
+        // a P3 polish item.
+        requestNotificationPermissionWithRationale();
+        requestSmsPermissionWithRationale();
 
-        // Link UI
         textTotalBalance = findViewById(R.id.textTotalBalance);
         textCardTitle = findViewById(R.id.textCardTitle);
         textSwipeHint = findViewById(R.id.textSwipeHint);
@@ -68,7 +75,6 @@ public class MainActivity extends AppCompatActivity {
         ImageButton btnReset = findViewById(R.id.btnReset);
         View btnOpenPortfolio = findViewById(R.id.btnOpenPortfolio);
 
-        // RecyclerView
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new TransactionAdapter();
@@ -76,11 +82,9 @@ public class MainActivity extends AppCompatActivity {
 
         setupPieChart();
 
-        // ViewModels
         transactionViewModel = new ViewModelProvider(this).get(TransactionViewModel.class);
-        stockViewModel = new ViewModelProvider(this).get(StockViewModel.class);
+        StockViewModel stockViewModel = new ViewModelProvider(this).get(StockViewModel.class);
 
-        // Observe stocks for net worth
         stockViewModel.getAllStocks().observe(this, stocks -> {
             totalPortfolioInvested = 0.0;
             if (stocks != null) {
@@ -94,15 +98,13 @@ public class MainActivity extends AppCompatActivity {
         setupMonthSpinner();
         setupSwipeListener();
 
-        // Button clicks
-        btnReset.setOnClickListener(v -> {
-            new AlertDialog.Builder(this)
-                    .setTitle("Clear All Transactions?")
-                    .setMessage("This will permanently delete your entire transaction history.")
-                    .setPositiveButton("Delete", (dialog, which) -> transactionViewModel.deleteAllTransactions())
-                    .setNegativeButton("Cancel", null)
-                    .show();
-        });
+        btnReset.setOnClickListener(v -> new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_clear_title)
+                .setMessage(R.string.dialog_clear_message)
+                .setPositiveButton(R.string.action_delete, (dialog, which) ->
+                        transactionViewModel.deleteAllTransactions())
+                .setNegativeButton(R.string.action_cancel, null)
+                .show());
 
         btnOpenPortfolio.setOnClickListener(v ->
                 startActivity(new Intent(this, PortfolioActivity.class)));
@@ -159,8 +161,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupSwipeListener() {
         View cardBalance = findViewById(R.id.cardBalance);
-        // Tap to toggle between Expenses and Net Worth
-        // (swipe gestures conflict with NestedScrollView scrolling)
         cardBalance.setOnClickListener(v -> {
             isShowingPortfolio = !isShowingPortfolio;
             updateCardDisplay();
@@ -172,15 +172,14 @@ public class MainActivity extends AppCompatActivity {
             textCardTitle.setText(R.string.label_total_expenses);
             textTotalBalance.setText(String.format(Locale.getDefault(), "\u20B9%.2f", currentMonthExpenses));
             textTotalBalance.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
-            textSwipeHint.setText("Tap to view net worth");
+            textSwipeHint.setText(R.string.label_tap_net_worth);
         } else {
             textCardTitle.setText(R.string.label_invested_net_worth);
             double netWorth = totalPortfolioInvested - currentMonthExpenses;
             textTotalBalance.setText(String.format(Locale.getDefault(), "\u20B9%.2f", netWorth));
-
             int color = netWorth >= 0 ? R.color.accent_green : R.color.accent_red;
             textTotalBalance.setTextColor(ContextCompat.getColor(this, color));
-            textSwipeHint.setText("Tap to view expenses");
+            textSwipeHint.setText(R.string.label_tap_expenses);
         }
     }
 
@@ -200,7 +199,6 @@ public class MainActivity extends AppCompatActivity {
 
         updateCardDisplay();
 
-        // Pie chart
         ArrayList<PieEntry> entries = new ArrayList<>();
         for (Map.Entry<String, Float> entry : categoryMap.entrySet()) {
             entries.add(new PieEntry(entry.getValue(), entry.getKey()));
@@ -231,7 +229,7 @@ public class MainActivity extends AppCompatActivity {
         pieChart.setHoleColor(ContextCompat.getColor(this, R.color.bg_dark));
         pieChart.setHoleRadius(55f);
         pieChart.setTransparentCircleRadius(0f);
-        pieChart.setCenterText("Expenses");
+        pieChart.setCenterText(getString(R.string.label_expenses_short));
         pieChart.setCenterTextColor(ContextCompat.getColor(this, R.color.text_secondary));
         pieChart.setCenterTextSize(13f);
         pieChart.getDescription().setEnabled(false);
@@ -246,14 +244,49 @@ public class MainActivity extends AppCompatActivity {
         legend.setXEntrySpace(14f);
     }
 
-    private void requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATION)
-                    != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.POST_NOTIFICATION},
-                        1001);
-            }
+    // ==================== PERMISSIONS ====================
+
+    private void requestNotificationPermissionWithRationale() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED) return;
+
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS)) {
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.rationale_notifications_title)
+                    .setMessage(R.string.rationale_notifications_message)
+                    .setPositiveButton(R.string.action_continue, (d, w) -> ActivityCompat.requestPermissions(this,
+                            new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFICATIONS))
+                    .setNegativeButton(R.string.action_no_thanks, null)
+                    .show();
+        } else {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFICATIONS);
         }
+    }
+
+    private void requestSmsPermissionWithRationale() {
+        boolean receiveGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
+                == PackageManager.PERMISSION_GRANTED;
+        boolean readGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
+                == PackageManager.PERMISSION_GRANTED;
+        if (receiveGranted && readGranted) return;
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.rationale_sms_title)
+                .setMessage(R.string.rationale_sms_message)
+                .setPositiveButton(R.string.action_grant, (d, w) -> ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS},
+                        REQ_SMS))
+                .setNegativeButton(R.string.action_no_thanks, null)
+                .show();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        // Currently we don't need to react — the receiver/notifications simply
+        // start working once the user grants permission. Hook here to surface
+        // a Snackbar if you want to confirm.
     }
 }

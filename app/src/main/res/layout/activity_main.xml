@@ -49,7 +49,7 @@
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Reset"
+                android:contentDescription="@string/cd_reset"
                 android:src="@android:drawable/ic_menu_delete"
                 app:tint="@color/text_tertiary" />
         </RelativeLayout>
@@ -120,7 +120,8 @@
             android:id="@+id/pieChart"
             android:layout_width="match_parent"
             android:layout_height="220dp"
-            android:layout_marginTop="4dp" />
+            android:layout_marginTop="4dp"
+            android:contentDescription="@string/cd_pie_chart" />
 
         <!-- VIEW PORTFOLIO BUTTON -->
         <LinearLayout

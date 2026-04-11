@@ -23,7 +23,7 @@
                 android:layout_height="40dp"
                 android:layout_centerVertical="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Back"
+                android:contentDescription="@string/cd_back"
                 android:src="@android:drawable/ic_menu_revert"
                 app:tint="@color/text_primary" />
 
@@ -54,7 +54,7 @@
                 android:layout_toStartOf="@+id/btnSettings"
                 android:layout_centerVertical="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Sync"
+                android:contentDescription="@string/cd_sync"
                 android:src="@android:drawable/stat_notify_sync"
                 app:tint="@color/accent_purple" />
 
@@ -65,7 +65,7 @@
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Settings"
+                android:contentDescription="@string/cd_settings"
                 android:src="@android:drawable/ic_menu_manage"
                 app:tint="@color/text_secondary" />
         </RelativeLayout>
@@ -230,7 +230,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_margin="20dp"
-        android:contentDescription="Add Stock"
+        android:contentDescription="@string/cd_add_stock"
         android:src="@android:drawable/ic_input_add"
         app:backgroundTint="@color/accent_purple"
         app:tint="@color/bg_dark" />

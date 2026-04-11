@@ -10,6 +10,9 @@
     <string name="label_view_portfolio">View Stock Portfolio</string>
     <string name="label_no_transactions">No transactions yet</string>
     <string name="label_sms_hint">Transactions from bank SMS will appear here</string>
+    <string name="label_expenses_short">Expenses</string>
+    <string name="label_tap_net_worth">Tap to view net worth</string>
+    <string name="label_tap_expenses">Tap to view expenses</string>
 
     <!-- Portfolio Screen -->
     <string name="label_portfolio">Portfolio</string>
@@ -18,6 +21,7 @@
     <string name="label_total_pnl">Total P&amp;L</string>
     <string name="label_no_stocks">No stocks in portfolio</string>
     <string name="label_add_stock_hint">Tap + to add stocks manually, import from CAS, or sync with Angel One</string>
+    <string name="label_select_cas">Select CAS Statement</string>
 
     <!-- Bottom Sheet -->
     <string name="label_add_to_portfolio">Add to Portfolio</string>
@@ -28,7 +32,7 @@
     <string name="label_sync_angel">Sync Angel One</string>
     <string name="label_sync_angel_desc">Pull live holdings from your Angel One account</string>
 
-    <!-- Dialogs -->
+    <!-- Form labels -->
     <string name="label_stock_ticker">Stock Ticker (e.g., RELIANCE)</string>
     <string name="label_quantity">Quantity</string>
     <string name="label_avg_price">Average Buy Price (\u20B9)</string>
@@ -41,4 +45,83 @@
     <!-- Formats -->
     <string name="format_currency">\u20B9%s</string>
     <string name="format_zero">\u20B90.00</string>
+
+    <!-- Dialogs: Clear / Remove -->
+    <string name="dialog_clear_title">Clear All Transactions?</string>
+    <string name="dialog_clear_message">This will permanently delete your entire transaction history.</string>
+    <string name="dialog_remove_title">Remove %1$s?</string>
+    <string name="dialog_remove_message">This will remove the stock from your portfolio.</string>
+
+    <!-- Dialogs: OTP / Login / 2FA / Account -->
+    <string name="dialog_otp_title">Enter OTP</string>
+    <string name="dialog_otp_message">Open Google Authenticator and enter the 6-digit code for Angel One.</string>
+    <string name="dialog_login_title">Login to Angel One</string>
+    <string name="dialog_login_message">Enter your Angel One account details. These are saved (encrypted) for future sessions.</string>
+    <string name="dialog_2fa_title">Set Up Google Authenticator</string>
+    <string name="dialog_2fa_message">You need to enable 2FA on your Angel One account first.\n\n1. Open Angel One website\n2. Go to Settings → Security\n3. Enable Two-Factor Auth &amp; scan QR code with Google Authenticator app\n4. Come back and log in here</string>
+    <string name="dialog_account_title">Angel One Account</string>
+    <string name="dialog_account_message">Logged in as: %1$s</string>
+    <string name="dialog_delete_data_title">Delete All Data?</string>
+    <string name="dialog_delete_data_message">This permanently removes all transactions, holdings and saved credentials from this device. This cannot be undone.</string>
+
+    <!-- Dialogs: Manual entry / PDF -->
+    <string name="dialog_manual_title">Add Stock Manually</string>
+    <string name="dialog_pdf_password_title">PDF Password</string>
+    <string name="dialog_pdf_password_message">CAS statements are usually protected with your PAN number.</string>
+
+    <!-- Permission rationales (Play Store policy: explain BEFORE prompting) -->
+    <string name="rationale_notifications_title">Stay informed</string>
+    <string name="rationale_notifications_message">WealthFlow needs notification permission to alert you when new bank transactions are detected.</string>
+    <string name="rationale_sms_title">Read bank SMS</string>
+    <string name="rationale_sms_message">WealthFlow reads bank notification SMS on this device only — entirely on-device, never uploaded — to automatically log your transactions. You can deny this and still use manual entry.</string>
+
+    <!-- Actions -->
+    <string name="action_cancel">Cancel</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_verify">Verify</string>
+    <string name="action_help">Need Help?</string>
+    <string name="action_open_angelone">Open Angel One</string>
+    <string name="action_got_it">Got It</string>
+    <string name="action_logout">Logout</string>
+    <string name="action_delete_data">Delete Data</string>
+    <string name="action_delete_everything">Delete Everything</string>
+    <string name="action_add">Add</string>
+    <string name="action_parse">Parse</string>
+    <string name="action_no_password">No Password</string>
+    <string name="action_grant">Grant</string>
+    <string name="action_no_thanks">No thanks</string>
+
+    <!-- Toasts -->
+    <string name="toast_connected">Connected to Angel One!</string>
+    <string name="toast_logged_out">Logged out</string>
+    <string name="toast_data_deleted">All data deleted</string>
+    <string name="toast_syncing">Syncing holdings…</string>
+    <string name="toast_no_holdings">No holdings found</string>
+    <string name="toast_synced_count">%1$d stocks synced!</string>
+    <string name="toast_stock_added">%1$s added!</string>
+    <string name="toast_cas_imported">%1$d stocks imported from CAS!</string>
+
+    <!-- Errors -->
+    <string name="error_invalid_otp">Enter a valid 6-digit OTP</string>
+    <string name="error_login_failed">Login failed: %1$s</string>
+    <string name="error_fields_required">Both fields are required</string>
+    <string name="error_fill_all_fields">Please fill all fields</string>
+    <string name="error_positive_numbers">Quantity and price must be greater than zero</string>
+    <string name="error_invalid_number">Invalid number format</string>
+    <string name="error_no_file_manager">Please install a File Manager.</string>
+    <string name="error_pdf_unreadable">Could not read the PDF file</string>
+    <string name="error_pdf_no_stocks">No stocks found in the PDF.</string>
+    <string name="error_pdf_wrong_password">Incorrect password. CAS PDFs are typically protected with your PAN.</string>
+    <string name="error_pdf_failed">Failed to parse PDF: %1$s</string>
+    <string name="error_sync_failed">Sync failed: %1$s</string>
+
+    <!-- Accessibility (content descriptions) -->
+    <string name="cd_reset">Clear all transactions</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_sync">Sync holdings from broker</string>
+    <string name="cd_settings">Account settings</string>
+    <string name="cd_add_stock">Add a new stock</string>
+    <string name="cd_pie_chart">Pie chart of expenses by category</string>
 </resources>
