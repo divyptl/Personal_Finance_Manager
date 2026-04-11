@@ -201,6 +201,157 @@ public class SmsTransactionParserTest {
         assertEquals("Other", t.getCategory());
     }
 
+    // ---------- Real-world bank SMS templates (no currency prefix) ----------
+
+    /**
+     * SBI UPI debit SMS. Note: the amount "5.00" has NO currency prefix —
+     * it's anchored only by the verb "debited by". The tail of the message
+     * contains a reference number (610166269276) and a support phone number
+     * (1800111109) which MUST NOT be parsed as the amount.
+     */
+    @Test
+    public void parses_sbi_upi_debit_without_currency_prefix() {
+        String body = "Dear UPI user A/C X0620 debited by 5.00 on date 11Apr26 "
+                + "trf to DIVY PUNIT PATEL Refno 610166269276 If not u? "
+                + "call-1800111109 for other services-18001234-SBI";
+        Transaction t = parser.parse("VM-SBIUPI", body);
+        assertNotNull("SBI UPI debit must be recognised", t);
+        assertEquals(5.00, t.getAmount(), 0.001);
+        assertEquals("expense", t.getType());
+    }
+
+    @Test
+    public void sbi_upi_message_does_not_pick_up_phone_number_as_amount() {
+        String body = "Dear UPI user A/C X0620 debited by 5.00 on date 11Apr26 "
+                + "trf to DIVY PUNIT PATEL Refno 610166269276 If not u? "
+                + "call-1800111109 for other services-18001234-SBI";
+        double amount = parser.extractAmount(body.toLowerCase());
+        // Must be the 5.00 anchored to "debited by", NOT 610166269276 / 1800111109.
+        assertEquals(5.00, amount, 0.001);
+    }
+
+    @Test
+    public void parses_hdfc_sent_format_without_currency_prefix() {
+        // HDFC UPI "Sent" template — amount follows the verb directly.
+        Transaction t = parser.parse("AD-HDFCBK",
+                "Sent Rs.250.00 From HDFC Bank A/C *1234 To JOHN DOE "
+                        + "On 11-04-26 Ref 987654321. UPI");
+        assertNotNull(t);
+        assertEquals(250.00, t.getAmount(), 0.001);
+        assertEquals("expense", t.getType());
+    }
+
+    @Test
+    public void parses_icici_debited_with_format() {
+        Transaction t = parser.parse("VM-ICICIB",
+                "Acct XX123 debited with Rs 1,500.00 on 11-Apr-26; "
+                        + "UPI/610166269276/Payment to merchant");
+        assertNotNull(t);
+        assertEquals(1500.00, t.getAmount(), 0.001);
+        assertEquals("expense", t.getType());
+    }
+
+    @Test
+    public void parses_axis_spent_using_card() {
+        Transaction t = parser.parse("AD-AXISBK",
+                "INR 750 spent using your Axis Bank Card xx1234 at AMAZON "
+                        + "on 11-04-26. Avl Lmt INR 50000");
+        assertNotNull(t);
+        assertEquals(750.0, t.getAmount(), 0.001);
+        assertEquals("expense", t.getType());
+        assertEquals("Shopping", t.getCategory());
+    }
+
+    @Test
+    public void parses_kotak_credited_salary() {
+        Transaction t = parser.parse("VM-KOTAKB",
+                "Rs.45000.00 credited to Kotak Bank A/C x1234 on 01-04-26 "
+                        + "by NEFT ref 123456. Avl Bal Rs.50000");
+        assertNotNull(t);
+        assertEquals(45000.00, t.getAmount(), 0.001);
+        assertEquals("income", t.getType());
+    }
+
+    @Test
+    public void pnb_debit_without_currency_prefix_on_amount() {
+        // PNB "Debited 500.00" — no currency token immediately before the number.
+        Transaction t = parser.parse("VK-PNBSMS",
+                "A/c X1234 Debited 500.00 on 11-04-26 Trf To JOHN Ref No 98765");
+        assertNotNull(t);
+        assertEquals(500.00, t.getAmount(), 0.001);
+        assertEquals("expense", t.getType());
+    }
+
+    @Test
+    public void extracts_amount_after_debited_by_without_currency() {
+        assertEquals(5.00, parser.extractAmount("a/c x0620 debited by 5.00 on date"), 0.001);
+    }
+
+    @Test
+    public void extracts_amount_after_credited_with_without_currency() {
+        assertEquals(10000.0,
+                parser.extractAmount("acct x123 credited with 10000 on 01-apr"), 0.001);
+    }
+
+    @Test
+    public void does_not_pick_account_suffix_as_amount() {
+        // "X0620" must not turn into 620.
+        assertEquals(0.0, parser.extractAmount("dear upi user a/c x0620 balance enquiry"), 0.001);
+    }
+
+    @Test
+    public void does_not_pick_reference_number_as_amount() {
+        // Bare message with only a refno and no action verb → nothing to extract.
+        assertEquals(0.0,
+                parser.extractAmount("refno 610166269276 call-1800111109 for services"), 0.001);
+    }
+
+    @Test
+    public void parses_indian_lakh_comma_format() {
+        // "Rs.1,00,000.00" is how Indian banks print one lakh.
+        Transaction t = parser.parse("AD-HDFCBK",
+                "Rs.1,00,000.00 credited to A/c xx1234 by NEFT");
+        assertNotNull(t);
+        assertEquals(100000.0, t.getAmount(), 0.001);
+        assertEquals("income", t.getType());
+    }
+
+    @Test
+    public void parses_atm_cash_withdrawal() {
+        Transaction t = parser.parse("VM-SBIINB",
+                "Rs.2000 withdrawn at ATM on 11-Apr-26 A/c xx1234. Avl Bal Rs.30000");
+        assertNotNull(t);
+        assertEquals(2000.0, t.getAmount(), 0.001);
+        assertEquals("expense", t.getType());
+    }
+
+    @Test
+    public void parses_credit_card_transaction_of_format() {
+        Transaction t = parser.parse("AD-HDFCBK",
+                "Transaction of Rs.3500 on HDFC Credit Card xx1234 at FLIPKART on 11-Apr-26");
+        assertNotNull(t);
+        assertEquals(3500.0, t.getAmount(), 0.001);
+        assertEquals("expense", t.getType());
+        assertEquals("Shopping", t.getCategory());
+    }
+
+    @Test
+    public void parses_paytm_wallet_debit() {
+        Transaction t = parser.parse("VM-PAYTM",
+                "Paid Rs.150 to Swiggy from your Paytm Wallet. UPI Ref 12345");
+        assertNotNull(t);
+        assertEquals(150.0, t.getAmount(), 0.001);
+        assertEquals("expense", t.getType());
+        assertEquals("Food & Dining", t.getCategory());
+    }
+
+    @Test
+    public void balance_enquiry_with_large_numbers_is_ignored() {
+        // No debit/credit verb → should be rejected even though "Rs.50000" exists.
+        assertNull(parser.parse("VK-HDFCBK",
+                "Your A/c xx1234 balance as on 11-Apr-26 is Rs.50000"));
+    }
+
     // ---------- End-to-end happy path ----------
 
     @Test

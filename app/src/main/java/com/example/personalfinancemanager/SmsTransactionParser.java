@@ -28,21 +28,54 @@ import java.util.regex.Pattern;
  */
 public class SmsTransactionParser {
 
-    // Amount patterns: Rs.1234, Rs 1,234.56, INR 500, ₹750.00, Rs1234
-    private static final Pattern AMOUNT_PATTERN = Pattern.compile(
-            "(?:rs\\.?|inr|\\u20B9)\\s*([0-9,]+(?:\\.[0-9]+)?)", Pattern.CASE_INSENSITIVE);
+    // ---------- Amount patterns ----------
+    //
+    // We run three passes in order of confidence. The first pass that yields
+    // a sensible number wins. This ordering matters: the currency-prefixed
+    // pass is unambiguous and should always take precedence over heuristics.
+
+    /** Pass 1: explicit currency prefix — "Rs.1234", "INR 500", "\u20B9750.00", "Rs1234". */
+    private static final Pattern AMOUNT_WITH_CURRENCY_PREFIX = Pattern.compile(
+            "(?:rs\\.?|inr|\\u20B9)\\s*([0-9,]+(?:\\.[0-9]+)?)",
+            Pattern.CASE_INSENSITIVE);
+
+    /** Pass 2: amount immediately following an action verb ("debited by 5.00",
+     *  "credited with 1,000", "sent 500 to ..."). The verb anchors the
+     *  extraction so we never pick up phone numbers, reference numbers, OTPs,
+     *  account suffixes or dates. The optional connector word ("by / with /
+     *  for / of") and optional currency token cover the format variants we've
+     *  seen from SBI, HDFC, ICICI, Axis, Kotak, PNB and BoB. */
+    private static final Pattern AMOUNT_AFTER_VERB = Pattern.compile(
+            "(?:debited|credited|withdrawn|withdrawal|deposited|received|sent|spent|paid"
+                    + "|deducted|charged|transferred|purchase(?:d)?|txn\\s+of"
+                    + "|payment\\s+of|transaction\\s+of|amount\\s+of)"
+                    + "(?:\\s+(?:by|with|for|of|from|to|amount))?"
+                    + "\\s*(?:rs\\.?|inr|\\u20B9)?\\s*"
+                    + "([0-9][0-9,]*(?:\\.[0-9]{1,2})?)",
+            Pattern.CASE_INSENSITIVE);
+
+    /** Pass 3: suffixed currency — "500 INR spent", "1,234.56 Rs". Rare but
+     *  seen on a few older PSU bank templates. */
+    private static final Pattern AMOUNT_WITH_CURRENCY_SUFFIX = Pattern.compile(
+            "([0-9,]+(?:\\.[0-9]+)?)\\s*(?:rs\\.?|inr|\\u20B9)",
+            Pattern.CASE_INSENSITIVE);
 
     private static final String[] DEBIT_KEYWORDS = {
-            "debited", "deducted", "withdrawn", "spent", "paid",
+            "debited", "deducted", "withdrawn", "withdrawal", "spent", "paid",
             "sent", "transferred", "purchase", "payment of",
             "debit", "dr", "charged", "used at", "txn of",
-            "deducted from", "transaction on", "money sent"
+            "deducted from", "transaction on", "money sent",
+            "trf to", "transfer to", "sent to", "paid to",
+            "withdrawn from", "debit alert", "purchased for",
+            "transaction of", "atm withdrawal", "paying"
     };
 
     private static final String[] CREDIT_KEYWORDS = {
             "credited", "received", "deposited", "refund",
             "cashback", "reversed", "credit", "cr",
-            "money received", "added to", "settled"
+            "money received", "added to", "settled",
+            "credit alert", "received from", "credited to",
+            "has been credited", "amount credited"
     };
 
     private static final String[] IGNORE_KEYWORDS = {
@@ -93,7 +126,19 @@ public class SmsTransactionParser {
 
     /** Visible for testing. */
     double extractAmount(String message) {
-        Matcher matcher = AMOUNT_PATTERN.matcher(message);
+        // Pass 1 — explicit currency prefix wins.
+        double v = firstMatch(AMOUNT_WITH_CURRENCY_PREFIX, message);
+        if (v > 0) return v;
+        // Pass 2 — amount anchored to an action verb.
+        v = firstMatch(AMOUNT_AFTER_VERB, message);
+        if (v > 0) return v;
+        // Pass 3 — suffix form.
+        v = firstMatch(AMOUNT_WITH_CURRENCY_SUFFIX, message);
+        return v;
+    }
+
+    private static double firstMatch(Pattern p, String message) {
+        Matcher matcher = p.matcher(message);
         if (matcher.find()) {
             try {
                 return Double.parseDouble(matcher.group(1).replace(",", ""));
