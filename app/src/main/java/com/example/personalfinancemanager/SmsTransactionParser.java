@@ -72,19 +72,97 @@ public class SmsTransactionParser {
 
     private static final String[] CREDIT_KEYWORDS = {
             "credited", "received", "deposited", "refund",
-            "cashback", "reversed", "credit", "cr",
+            "reversed", "credit", "cr",
             "money received", "added to", "settled",
             "credit alert", "received from", "credited to",
             "has been credited", "amount credited"
+            // Note: "cashback" deliberately removed. Real cashback messages
+            // ("Rs.50 cashback credited to your account") still trigger via
+            // "credited". Standalone "cashback" matches promo SMS like
+            // "unlock Rs.50 cashback every month".
     };
 
     private static final String[] IGNORE_KEYWORDS = {
-            "otp", "one time password", "verification code",
-            "offer", "apply now", "pre-approved", "limit increased",
+            // OTP / verification
+            "otp", "one time password", "verification code", "verify your",
+            "secure code", "auth code",
+
+            // Account-opening / sales pitches
+            "open a bank", "open an account", "open ur account",
+            "open your account", "open a/c", "opening a", "open free",
+            "new bank account", "instant account",
+
+            // Generic marketing verbs / phrases
+            "offer", "apply now", "apply today", "apply for",
+            "pre-approved", "preapproved", "limit increased",
+            "get up to", "get upto", "earn up to", "earn upto",
+            "save up to", "save upto", "win up to", "win upto",
+            "win rs", "upto rs", "up to rs",
+            "cashback up to", "cashback upto", "cashback every",
+            "monthly cashback", "guaranteed cashback",
+            "unlock rs", "unlock cashback", "exclusive",
+            "limited offer", "limited time", "special offer",
+            "festive offer", "introducing", "announcing", "presenting",
+            "rewards worth", "points worth", "complimentary",
+            "free for", "lifetime free", "no charges", "zero charges",
+            "0% interest", "zero processing",
+
+            // Loan / card pitches
+            "personal loan", "home loan", "gold loan", "car loan",
+            "instant loan", "loan offer", "loan upto", "loan up to",
+            "loan at", "loan against", "credit card offer",
+            "card offer", "free card", "new card", "interest at",
+            "lowest interest", "low interest",
+
+            // EMI / bill due reminders (not new transactions)
             "emi", "due date", "minimum due", "bill generated",
-            "get up to", "cashback up to", "win", "congrat",
-            "download", "update", "install", "click here",
-            "upgrade", "activate", "expir"
+            "payment due", "is due on", "overdue",
+
+            // CTAs
+            "click here", "click to", "tap to", "visit ", "log on to",
+            "log in to", "register at", "register on", "register your",
+            "missed call", "give miss call", "give a missed call",
+            "to know more", "for details call", "to apply", "sms to",
+
+            // KYC prompts (account-action, not txn)
+            "kyc pending", "complete kyc", "update kyc", "kyc update",
+            "re-kyc", "re kyc",
+
+            // App / install nudges
+            "download", "install", "upgrade", "activate", "expir",
+
+            // Failed / declined txns (NOT new money movements)
+            "transaction failed", "txn failed", "transaction declined",
+            "txn declined", "could not be processed", "unsuccessful",
+
+            // Misc promo
+            "win", "congrat", "lucky", "winner", "scratch card",
+            "convert to emi", "convert into emi"
+    };
+
+    /**
+     * Hard requirement: a real bank-transaction SMS always references the
+     * underlying instrument — an account, a card, a UPI/IMPS/NEFT/RTGS rail,
+     * an ATM, a wallet, or carries a balance / reference number. Promotional
+     * SMS almost never contain any of these, so requiring at least one anchor
+     * eliminates the entire class of false positives like
+     * "Open a bank account today & unlock Rs.50 cashback every month".
+     *
+     * <p>Importantly, the loose word "account" is NOT an anchor — promo
+     * messages routinely say "Open an account" / "your savings account" /
+     * "premium account". Only the abbreviated forms (a/c, acct, ac no) and
+     * the structured rails count.
+     */
+    private static final String[] TRANSACTIONAL_ANCHORS = {
+            "a/c", "acct", "ac no", "ac.no", "ac:",
+            "credit card", "debit card", "card xx", "card x", "card no",
+            "card ending", "card *", "your card",
+            "upi", "imps", "neft", "rtgs", "vpa", "p2p", "p2m",
+            "atm", "wallet",
+            "ref no", "refno", "ref:", "ref.", "txn id", "txn no", "txn:",
+            "transaction id", "rrn",
+            "avl bal", "avbl bal", "available bal", "ledger bal",
+            "available balance", "current balance"
     };
 
     /**
@@ -99,6 +177,11 @@ public class SmsTransactionParser {
         String lower = messageBody.toLowerCase();
 
         if (containsAny(lower, IGNORE_KEYWORDS)) return null;
+
+        // Anchor gate: reject SMS that don't reference any real banking
+        // instrument (account, card, UPI rail, wallet, ref no, balance...).
+        // This is the primary defence against promotional false positives.
+        if (!containsAny(lower, TRANSACTIONAL_ANCHORS)) return null;
 
         double amount = extractAmount(lower);
         if (amount <= 0) return null;
@@ -230,7 +313,9 @@ public class SmsTransactionParser {
                 "angelone", "angel one", "mutual fund", "sip",
                 "investment", "mf purchase", "nps", "ppf",
                 "smallcase", "kuvera", "coin", "paytm money",
-                "ipo", "trading")) {
+                "ipo", "trading", "fyers", "5paisa", "icicidirect",
+                "hdfc securities", "kotak securities", "motilal",
+                "sharekhan", "edelweiss", "demat")) {
             return "Investments";
         }
         if (matchesAny(message, "upi", "neft", "rtgs", "imps",
