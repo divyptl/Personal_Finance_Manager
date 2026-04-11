@@ -259,20 +259,32 @@ public class PortfolioActivity extends AppCompatActivity {
     // ==================== SYNC HOLDINGS ====================
 
     private void syncBrokerHoldings() {
-        // Present a broker chooser. Previously only Angel One was supported.
+        boolean angelConfigured = credentialManager.isConfigured();
+        boolean upstoxConnected = upstoxBrokerApi.isAuthenticated();
+
+        // If exactly one broker is set up, skip the chooser and go straight to sync.
+        if (angelConfigured && !upstoxConnected) {
+            syncAngelOneHoldings();
+            return;
+        }
+        if (upstoxConnected && !angelConfigured) {
+            syncUpstoxHoldings();
+            return;
+        }
+
+        // Both connected (or neither) — let the user pick.
         CharSequence[] options = new CharSequence[] {
                 getString(R.string.broker_angel_one),
                 getString(R.string.broker_upstox)
         };
         new AlertDialog.Builder(this)
                 .setTitle(R.string.dialog_choose_broker_title)
-                .setMessage(R.string.dialog_choose_broker_message)
+                .setMessage(angelConfigured
+                        ? R.string.dialog_choose_broker_message        // both linked
+                        : R.string.dialog_choose_broker_setup_message) // neither linked
                 .setItems(options, (dialog, which) -> {
-                    if (which == 0) {
-                        syncAngelOneHoldings();
-                    } else {
-                        syncUpstoxHoldings();
-                    }
+                    if (which == 0) syncAngelOneHoldings();
+                    else            syncUpstoxHoldings();
                 })
                 .setNegativeButton(R.string.action_cancel, null)
                 .show();
