@@ -35,7 +35,8 @@ public class PortfolioActivity extends AppCompatActivity {
 
     // Injected via ServiceLocator (was: new'd directly)
     private CredentialManager credentialManager;
-    private BrokerApi brokerApi;
+    private BrokerApi brokerApi;         // Angel One
+    private BrokerApi upstoxBrokerApi;   // Upstox (OAuth2)
 
     private TextView tvTotalInvested, tvCurrentValue, tvTotalPnl, tvPnlPercent;
     private ProgressBar progressSync;
@@ -60,6 +61,7 @@ public class PortfolioActivity extends AppCompatActivity {
         ServiceLocator services = ServiceLocator.get(this);
         credentialManager = services.credentialManager();
         brokerApi = services.brokerApi();
+        upstoxBrokerApi = services.upstoxBrokerApi();
 
         // Link UI
         tvTotalInvested = findViewById(R.id.tvTotalInvested);
@@ -257,6 +259,26 @@ public class PortfolioActivity extends AppCompatActivity {
     // ==================== SYNC HOLDINGS ====================
 
     private void syncBrokerHoldings() {
+        // Present a broker chooser. Previously only Angel One was supported.
+        CharSequence[] options = new CharSequence[] {
+                getString(R.string.broker_angel_one),
+                getString(R.string.broker_upstox)
+        };
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_choose_broker_title)
+                .setMessage(R.string.dialog_choose_broker_message)
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        syncAngelOneHoldings();
+                    } else {
+                        syncUpstoxHoldings();
+                    }
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
+    }
+
+    private void syncAngelOneHoldings() {
         ensureAuthThenRun(() -> {
             showSyncProgress(true);
             toast(R.string.toast_syncing);
@@ -282,6 +304,52 @@ public class PortfolioActivity extends AppCompatActivity {
                 }
             });
         });
+    }
+
+    private void syncUpstoxHoldings() {
+        if (!upstoxBrokerApi.isAuthenticated()) {
+            launchUpstoxOAuth();
+            return;
+        }
+        showSyncProgress(true);
+        toast(R.string.toast_syncing);
+        upstoxBrokerApi.fetchHoldings(new BrokerApi.HoldingsCallback() {
+            @Override
+            public void onHoldingsFetched(List<Stock> holdings) {
+                showSyncProgress(false);
+                if (holdings.isEmpty()) {
+                    toast(R.string.toast_no_holdings);
+                    return;
+                }
+                for (Stock stock : holdings) {
+                    stockViewModel.buyStock(
+                            stock.getTicker(), stock.getSymbolToken(),
+                            stock.getQuantity(), stock.getAverageBuyPrice(), "Upstox");
+                }
+                toast(getString(R.string.toast_synced_count, holdings.size()));
+            }
+            @Override
+            public void onError(String error) {
+                showSyncProgress(false);
+                toast(getString(R.string.error_sync_failed, error));
+            }
+        });
+    }
+
+    private void launchUpstoxOAuth() {
+        String url = upstoxBrokerApi.buildAuthorizationUrl();
+        if (url == null) {
+            toast(R.string.error_upstox_not_configured);
+            return;
+        }
+        try {
+            toast(R.string.toast_upstox_opening);
+            Intent browser = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            browser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(browser);
+        } catch (android.content.ActivityNotFoundException e) {
+            toast(R.string.error_upstox_no_browser);
+        }
     }
 
     // ==================== LIVE PRICES ====================

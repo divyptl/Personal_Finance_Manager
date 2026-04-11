@@ -117,6 +117,19 @@
     <string name="error_pdf_failed">Failed to parse PDF: %1$s</string>
     <string name="error_sync_failed">Sync failed: %1$s</string>
 
+    <!-- Upstox OAuth2 -->
+    <string name="dialog_choose_broker_title">Connect a broker</string>
+    <string name="dialog_choose_broker_message">Pick which broker to sync your holdings from.</string>
+    <string name="broker_angel_one">Angel One (TOTP login)</string>
+    <string name="broker_upstox">Upstox (browser login)</string>
+    <string name="toast_upstox_connected">Upstox connected</string>
+    <string name="toast_upstox_opening">Opening Upstox login…</string>
+    <string name="error_upstox_no_code">Upstox login cancelled</string>
+    <string name="error_upstox_oauth">Upstox login error: %1$s</string>
+    <string name="error_upstox_auth">Upstox authentication failed: %1$s</string>
+    <string name="error_upstox_not_configured">Upstox client ID not set. Add UPSTOX_CLIENT_ID to local.properties and rebuild.</string>
+    <string name="error_upstox_no_browser">No browser installed to open the Upstox login page.</string>
+
     <!-- Accessibility (content descriptions) -->
     <string name="cd_reset">Clear all transactions</string>
     <string name="cd_back">Back</string>
