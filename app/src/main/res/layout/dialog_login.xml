@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="4dp">
+
+    <EditText
+        android:id="@+id/inputClientCode"
+        style="@style/InputField"
+        android:layout_marginTop="8dp"
+        android:hint="Client Code (Account Number)"
+        android:inputType="text"
+        android:importantForAutofill="no" />
+
+    <EditText
+        android:id="@+id/inputPin"
+        style="@style/InputField"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="8dp"
+        android:hint="Trading PIN"
+        android:inputType="numberPassword"
+        android:importantForAutofill="no" />
+</LinearLayout>

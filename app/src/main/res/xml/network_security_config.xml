@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Network security configuration.
+
+    - cleartextTrafficPermitted = false everywhere (no plain HTTP).
+    - Certificate pinning is configured in code (see NetworkModule.java)
+      because the pin value comes from BuildConfig and may be empty in
+      development. Hardcoding it here would lock the dev build.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <domain-config>
+        <domain includeSubdomains="true">apiconnect.angelbroking.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>

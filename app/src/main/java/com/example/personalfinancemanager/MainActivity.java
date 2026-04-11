@@ -1,10 +1,10 @@
 package com.example.personalfinancemanager;
 
+import android.Manifest;
 import android.content.Intent;
-import android.graphics.Color;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
-import android.view.GestureDetector;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -12,8 +12,11 @@ import android.widget.ImageButton;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -23,7 +26,7 @@ import com.github.mikephil.charting.components.Legend;
 import com.github.mikephil.charting.data.PieData;
 import com.github.mikephil.charting.data.PieDataSet;
 import com.github.mikephil.charting.data.PieEntry;
-import com.google.android.material.button.MaterialButton;
+import com.github.mikephil.charting.formatter.PercentFormatter;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -35,40 +38,43 @@ import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final int REQ_NOTIFICATIONS = 1001;
+    private static final int REQ_SMS = 1002;
+
     private TransactionViewModel transactionViewModel;
-    private StockViewModel stockViewModel;
     private TransactionAdapter adapter;
 
-    private TextView textTotalBalance;
-    private TextView textCardTitle;
-    private TextView textSwipeHint;
+    private TextView textTotalBalance, textCardTitle, textSwipeHint;
     private PieChart pieChart;
     private Spinner spinnerMonth;
 
-    // Data Trackers
     private double currentMonthExpenses = 0.0;
     private double totalPortfolioInvested = 0.0;
-    private boolean isShowingPortfolio = false; // False = Expenses, True = Net Worth
+    private boolean isShowingPortfolio = false;
 
-    // Month Data
-    private List<Long> startDates = new ArrayList<>();
-    private List<Long> endDates = new ArrayList<>();
+    private final List<Long> startDates = new ArrayList<>();
+    private final List<Long> endDates = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // 1. Link UI
+        // Permission rationales — Play Store policy requires that we explain
+        // BEFORE prompting why we need each permission. We use AlertDialogs
+        // here as a lightweight pre-prompt; an in-app onboarding screen is
+        // a P3 polish item.
+        requestNotificationPermissionWithRationale();
+        requestSmsPermissionWithRationale();
+
         textTotalBalance = findViewById(R.id.textTotalBalance);
         textCardTitle = findViewById(R.id.textCardTitle);
         textSwipeHint = findViewById(R.id.textSwipeHint);
         pieChart = findViewById(R.id.pieChart);
         spinnerMonth = findViewById(R.id.spinnerMonth);
         ImageButton btnReset = findViewById(R.id.btnReset);
-        MaterialButton btnOpenPortfolio = findViewById(R.id.btnOpenPortfolio);
+        View btnOpenPortfolio = findViewById(R.id.btnOpenPortfolio);
 
-        // 2. Setup RecyclerView
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new TransactionAdapter();
@@ -76,137 +82,107 @@ public class MainActivity extends AppCompatActivity {
 
         setupPieChart();
 
-        // 3. Initialize ViewModels (We need both now!)
         transactionViewModel = new ViewModelProvider(this).get(TransactionViewModel.class);
-        stockViewModel = new ViewModelProvider(this).get(StockViewModel.class);
+        StockViewModel stockViewModel = new ViewModelProvider(this).get(StockViewModel.class);
 
-
-        // 4. Observe Stock Portfolio to calculate Net Worth
         stockViewModel.getAllStocks().observe(this, stocks -> {
             totalPortfolioInvested = 0.0;
-
             if (stocks != null) {
                 for (Stock s : stocks) {
                     totalPortfolioInvested += (s.getQuantity() * s.getAverageBuyPrice());
                 }
             }
-            updateCardDisplay(); // Refresh the card if it's showing Net Worth
+            updateCardDisplay();
         });
 
-        // 5. Setup Month Dropdown & Logic
         setupMonthSpinner();
-
-        // 6. Setup Swipe Detection on the Card
         setupSwipeListener();
 
-        // 7. Button Clicks
-        btnReset.setOnClickListener(v -> {
-            new AlertDialog.Builder(this)
-                    .setTitle("Wipe Data?")
-                    .setMessage("This will permanently delete your entire transaction history.")
-                    .setPositiveButton("Delete", (dialog, which) -> transactionViewModel.deleteAllTransactions())
-                    .setNegativeButton("Cancel", null)
-                    .show();
-        });
+        btnReset.setOnClickListener(v -> new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_clear_title)
+                .setMessage(R.string.dialog_clear_message)
+                .setPositiveButton(R.string.action_delete, (dialog, which) ->
+                        transactionViewModel.deleteAllTransactions())
+                .setNegativeButton(R.string.action_cancel, null)
+                .show());
 
-        btnOpenPortfolio.setOnClickListener(v -> startActivity(new Intent(MainActivity.this, PortfolioActivity.class)));
+        btnOpenPortfolio.setOnClickListener(v ->
+                startActivity(new Intent(this, PortfolioActivity.class)));
     }
 
-    // --- SPINNER LOGIC ---
     private void setupMonthSpinner() {
         List<String> monthNames = new ArrayList<>();
         Calendar cal = Calendar.getInstance();
-        SimpleDateFormat sdf = new SimpleDateFormat("MMMM yyyy", Locale.getDefault());
+        SimpleDateFormat sdf = new SimpleDateFormat("MMM yyyy", Locale.getDefault());
 
-        // Generate the last 6 months
         for (int i = 0; i < 6; i++) {
-            // End of Month
             Calendar endCal = (Calendar) cal.clone();
             endCal.set(Calendar.DAY_OF_MONTH, endCal.getActualMaximum(Calendar.DAY_OF_MONTH));
             endCal.set(Calendar.HOUR_OF_DAY, 23);
             endCal.set(Calendar.MINUTE, 59);
+            endCal.set(Calendar.SECOND, 59);
             endDates.add(endCal.getTimeInMillis());
 
-            // Start of Month
             Calendar startCal = (Calendar) cal.clone();
             startCal.set(Calendar.DAY_OF_MONTH, 1);
             startCal.set(Calendar.HOUR_OF_DAY, 0);
             startCal.set(Calendar.MINUTE, 0);
+            startCal.set(Calendar.SECOND, 0);
             startDates.add(startCal.getTimeInMillis());
 
             monthNames.add(sdf.format(cal.getTime()));
-            cal.add(Calendar.MONTH, -1); // Go back one month
+            cal.add(Calendar.MONTH, -1);
         }
 
-        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, monthNames);
+        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_dropdown_item, monthNames);
         spinnerMonth.setAdapter(spinnerAdapter);
 
-        // When a user selects a month, fetch that month's data!
         spinnerMonth.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                // To keep text white in the dark theme spinner
-                if (parent.getChildAt(0) != null) {
-                    ((TextView) parent.getChildAt(0)).setTextColor(Color.WHITE);
+                if (parent.getChildAt(0) instanceof TextView) {
+                    ((TextView) parent.getChildAt(0)).setTextColor(
+                            ContextCompat.getColor(MainActivity.this, R.color.text_primary));
                 }
-
-                // Fetch the data for the selected timeframe
                 long start = startDates.get(position);
                 long end = endDates.get(position);
-
-                // Stop observing old data, start observing new timeframe
-                transactionViewModel.getTransactionsByMonth(start, end).observe(MainActivity.this, transactions -> {
-                    adapter.setTransactions(transactions);
-                    calculateDashboard(transactions);
-                });
+                transactionViewModel.getTransactionsByMonth(start, end).observe(
+                        MainActivity.this, transactions -> {
+                            adapter.setTransactions(transactions);
+                            calculateDashboard(transactions);
+                        });
             }
-            @Override public void onNothingSelected(AdapterView<?> parent) {}
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
         });
     }
 
-    // --- SWIPE LOGIC ---
     private void setupSwipeListener() {
         View cardBalance = findViewById(R.id.cardBalance);
-        GestureDetector gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
-            @Override
-            public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-                float diffX = e2.getX() - e1.getX();
-                if (Math.abs(diffX) > 100) { // If swiped horizontally
-                    isShowingPortfolio = !isShowingPortfolio; // Toggle state
-                    updateCardDisplay();
-                    return true;
-                }
-                return false;
-            }
-        });
-
-        cardBalance.setOnTouchListener((v, event) -> {
-            gestureDetector.onTouchEvent(event);
-            return true;
+        cardBalance.setOnClickListener(v -> {
+            isShowingPortfolio = !isShowingPortfolio;
+            updateCardDisplay();
         });
     }
 
-    // --- DASHBOARD DISPLAY UPDATE ---
     private void updateCardDisplay() {
         if (!isShowingPortfolio) {
-            textCardTitle.setText("Total Expenses");
-            textTotalBalance.setText(String.format("₹%.2f", currentMonthExpenses));
-            textTotalBalance.setTextColor(Color.WHITE);
-            textSwipeHint.setText("● ○"); // Dot indicator
+            textCardTitle.setText(R.string.label_total_expenses);
+            textTotalBalance.setText(String.format(Locale.getDefault(), "\u20B9%.2f", currentMonthExpenses));
+            textTotalBalance.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+            textSwipeHint.setText(R.string.label_tap_net_worth);
         } else {
-            textCardTitle.setText("Invested Net Worth");
+            textCardTitle.setText(R.string.label_invested_net_worth);
             double netWorth = totalPortfolioInvested - currentMonthExpenses;
-            textTotalBalance.setText(String.format("₹%.2f", netWorth));
-
-            // Turn green if you're positive, red if you've spent more than you invested
-            if (netWorth >= 0) textTotalBalance.setTextColor(Color.parseColor("#4CAF50"));
-            else textTotalBalance.setTextColor(Color.parseColor("#FF5252"));
-
-            textSwipeHint.setText("○ ●");
+            textTotalBalance.setText(String.format(Locale.getDefault(), "\u20B9%.2f", netWorth));
+            int color = netWorth >= 0 ? R.color.accent_green : R.color.accent_red;
+            textTotalBalance.setTextColor(ContextCompat.getColor(this, color));
+            textSwipeHint.setText(R.string.label_tap_expenses);
         }
     }
 
-    // --- MATH ENGINE ---
     private void calculateDashboard(List<Transaction> transactions) {
         currentMonthExpenses = 0.0;
         Map<String, Float> categoryMap = new HashMap<>();
@@ -215,44 +191,102 @@ public class MainActivity extends AppCompatActivity {
             String type = t.getType();
             if (type != null && (type.equalsIgnoreCase("Debit") || type.equalsIgnoreCase("expense"))) {
                 currentMonthExpenses += t.getAmount();
-
                 String category = t.getCategory() != null ? t.getCategory() : "Other";
-                float currentCatTotal = categoryMap.getOrDefault(category, 0f);
-                categoryMap.put(category, currentCatTotal + (float) t.getAmount());
+                float current = categoryMap.getOrDefault(category, 0f);
+                categoryMap.put(category, current + (float) t.getAmount());
             }
         }
 
-        updateCardDisplay(); // Update the UI numbers
+        updateCardDisplay();
 
-        // Update Pie Chart
-        ArrayList<PieEntry> pieEntries = new ArrayList<>();
-        for (Map.Entry<String, Float> entry : categoryMap.entrySet()) pieEntries.add(new PieEntry(entry.getValue(), entry.getKey()));
+        ArrayList<PieEntry> entries = new ArrayList<>();
+        for (Map.Entry<String, Float> entry : categoryMap.entrySet()) {
+            entries.add(new PieEntry(entry.getValue(), entry.getKey()));
+        }
 
-        PieDataSet dataSet = new PieDataSet(pieEntries, "");
-        ArrayList<Integer> colors = new ArrayList<>();
-        colors.add(Color.parseColor("#BB86FC"));
-        colors.add(Color.parseColor("#03DAC5"));
-        colors.add(Color.parseColor("#CF6679"));
-        colors.add(Color.parseColor("#FFB74D"));
-        colors.add(Color.parseColor("#64B5F6"));
-        dataSet.setColors(colors);
-        dataSet.setValueTextColor(Color.WHITE);
-        dataSet.setValueTextSize(12f);
+        PieDataSet dataSet = new PieDataSet(entries, "");
+        dataSet.setColors(
+                ContextCompat.getColor(this, R.color.accent_purple),
+                ContextCompat.getColor(this, R.color.accent_cyan),
+                ContextCompat.getColor(this, R.color.accent_red),
+                ContextCompat.getColor(this, R.color.accent_amber),
+                ContextCompat.getColor(this, R.color.accent_blue),
+                ContextCompat.getColor(this, R.color.accent_green)
+        );
+        dataSet.setValueTextColor(ContextCompat.getColor(this, R.color.text_primary));
+        dataSet.setValueTextSize(11f);
+        dataSet.setSliceSpace(2f);
+        dataSet.setValueFormatter(new PercentFormatter(pieChart));
 
         PieData data = new PieData(dataSet);
         pieChart.setData(data);
+        pieChart.setUsePercentValues(true);
         pieChart.invalidate();
     }
 
     private void setupPieChart() {
         pieChart.setDrawHoleEnabled(true);
-        pieChart.setHoleColor(Color.parseColor("#121212"));
+        pieChart.setHoleColor(ContextCompat.getColor(this, R.color.bg_dark));
+        pieChart.setHoleRadius(55f);
         pieChart.setTransparentCircleRadius(0f);
-        pieChart.setCenterText("Expenses");
-        pieChart.setCenterTextColor(Color.WHITE);
+        pieChart.setCenterText(getString(R.string.label_expenses_short));
+        pieChart.setCenterTextColor(ContextCompat.getColor(this, R.color.text_secondary));
+        pieChart.setCenterTextSize(13f);
         pieChart.getDescription().setEnabled(false);
+        pieChart.setDrawEntryLabels(false);
+        pieChart.setRotationEnabled(false);
+
         Legend legend = pieChart.getLegend();
-        legend.setTextColor(Color.WHITE);
+        legend.setTextColor(ContextCompat.getColor(this, R.color.text_secondary));
+        legend.setTextSize(11f);
         legend.setHorizontalAlignment(Legend.LegendHorizontalAlignment.CENTER);
+        legend.setFormSize(10f);
+        legend.setXEntrySpace(14f);
+    }
+
+    // ==================== PERMISSIONS ====================
+
+    private void requestNotificationPermissionWithRationale() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED) return;
+
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.POST_NOTIFICATIONS)) {
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.rationale_notifications_title)
+                    .setMessage(R.string.rationale_notifications_message)
+                    .setPositiveButton(R.string.action_continue, (d, w) -> ActivityCompat.requestPermissions(this,
+                            new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFICATIONS))
+                    .setNegativeButton(R.string.action_no_thanks, null)
+                    .show();
+        } else {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFICATIONS);
+        }
+    }
+
+    private void requestSmsPermissionWithRationale() {
+        boolean receiveGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS)
+                == PackageManager.PERMISSION_GRANTED;
+        boolean readGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS)
+                == PackageManager.PERMISSION_GRANTED;
+        if (receiveGranted && readGranted) return;
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.rationale_sms_title)
+                .setMessage(R.string.rationale_sms_message)
+                .setPositiveButton(R.string.action_grant, (d, w) -> ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.RECEIVE_SMS, Manifest.permission.READ_SMS},
+                        REQ_SMS))
+                .setNegativeButton(R.string.action_no_thanks, null)
+                .show();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        // Currently we don't need to react — the receiver/notifications simply
+        // start working once the user grants permission. Hook here to surface
+        // a Snackbar if you want to confirm.
     }
 }

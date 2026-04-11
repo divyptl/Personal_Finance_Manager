@@ -1,38 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.personalfinancemanager">
+    xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+        SMS permissions are required for the bank-transaction tracking feature.
+        These are restricted by Google Play's SMS & Call Log Permissions Policy
+        (https://support.google.com/googleplay/android-developer/answer/10208820)
+        and require an in-Console Permissions Declaration before publishing.
+
+        If you cannot get the declaration approved, the SMS feature must be
+        disabled and removed from the manifest before submission.
+    -->
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
+
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <uses-feature
         android:name="android.hardware.telephony"
         android:required="false" />
 
     <application
-        android:allowBackup="true"
+        android:name=".WealthFlowApplication"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.PersonalFinanceManager">
+        android:theme="@style/Theme.PersonalFinanceManager"
+        tools:targetApi="31">
+
         <activity
             android:name=".PortfolioActivity"
             android:exported="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
+        <!--
+            SmsReceiver MUST be exported=true so the system (which is "external"
+            from this app's perspective) can deliver SMS_RECEIVED.
+            The android:permission attribute restricts senders to those holding
+            BROADCAST_SMS, which only the OS itself does — preventing other
+            apps from spoofing fake bank SMS into our parser.
+        -->
         <receiver
             android:name=".SmsReceiver"
-            android:exported="true">
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
             <intent-filter>
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>

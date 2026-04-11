@@ -1,9 +1,58 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
     <style name="Base.Theme.PersonalFinanceManager" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="colorPrimary">@color/accent_purple</item>
+        <item name="colorOnPrimary">@color/bg_dark</item>
+        <item name="colorPrimaryContainer">@color/accent_purple_dim</item>
+        <item name="colorSecondary">@color/accent_blue</item>
+        <item name="colorSurface">@color/bg_surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSurfaceVariant">@color/bg_card</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="android:colorBackground">@color/bg_dark</item>
+        <item name="android:windowBackground">@color/bg_dark</item>
+        <item name="android:statusBarColor">@color/status_bar</item>
+        <item name="android:navigationBarColor">@color/bg_dark</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="bottomSheetDialogTheme">@style/BottomSheetTheme</item>
+
+        <!-- Dialog theme -->
+        <item name="alertDialogTheme">@style/AlertDialogTheme</item>
     </style>
 
     <style name="Theme.PersonalFinanceManager" parent="Base.Theme.PersonalFinanceManager" />
+
+    <style name="BottomSheetTheme" parent="Theme.Material3.DayNight.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/BottomSheetStyle</item>
+        <item name="android:colorBackground">@android:color/transparent</item>
+    </style>
+
+    <style name="BottomSheetStyle" parent="Widget.Material3.BottomSheet">
+        <item name="backgroundTint">@color/bg_surface</item>
+        <item name="shapeAppearance">@style/SheetShape</item>
+    </style>
+
+    <style name="SheetShape" parent="ShapeAppearance.Material3.LargeComponent">
+        <item name="cornerSizeTopLeft">24dp</item>
+        <item name="cornerSizeTopRight">24dp</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
+    </style>
+
+    <style name="AlertDialogTheme" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorSurface">@color/bg_surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorPrimary">@color/accent_purple</item>
+    </style>
+
+    <!-- Input field style -->
+    <style name="InputField">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">52dp</item>
+        <item name="android:background">@drawable/bg_input</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_tertiary</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:paddingHorizontal">16dp</item>
+        <item name="android:singleLine">true</item>
+    </style>
 </resources>

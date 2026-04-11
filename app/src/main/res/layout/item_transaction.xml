@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="16dp"
-    android:layout_marginVertical="6dp"
+    android:layout_marginVertical="3dp"
     app:cardBackgroundColor="@color/bg_card"
+    app:cardCornerRadius="12dp"
     app:cardElevation="0dp"
     app:strokeColor="@color/bg_card_stroke"
     app:strokeWidth="1dp">
@@ -14,60 +14,68 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp">
+        android:padding="14dp">
 
-        <!-- TRANSACTION MESSAGE -->
-        <TextView
-            android:id="@+id/tvTransactionMessage"
+        <!-- Left: Message + Date -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
-            android:layout_toStartOf="@id/tvTransactionAmount"
-            android:layout_marginEnd="16dp"
-            android:fontFamily="sans-serif-medium"
-            android:text="Paid to Merchant"
-            android:textColor="@color/text_primary"
-            android:textSize="16sp" />
+            android:layout_centerVertical="true"
+            android:layout_toStartOf="@id/rightBlock"
+            android:layout_marginEnd="12dp"
+            android:orientation="vertical">
 
-        <!-- TRANSACTION DATE -->
-        <TextView
-            android:id="@+id/tvTransactionDate"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/tvTransactionMessage"
-            android:layout_alignParentStart="true"
-            android:layout_marginTop="4dp"
-            android:text="Today"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp" />
+            <TextView
+                android:id="@+id/tvTransactionMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="Paid to Merchant"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp" />
 
-        <!-- TRANSACTION AMOUNT -->
-        <TextView
-            android:id="@+id/tvTransactionAmount"
+            <TextView
+                android:id="@+id/tvTransactionDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="Today"
+                android:textColor="@color/text_tertiary"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- Right: Amount + Category -->
+        <LinearLayout
+            android:id="@+id/rightBlock"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
-            android:fontFamily="sans-serif-medium"
-            android:text="₹ 0.00"
-            android:textColor="@color/accent_red"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:layout_centerVertical="true"
+            android:gravity="end"
+            android:orientation="vertical">
 
-        <!-- AI CATEGORY TAG -->
-        <TextView
-            android:id="@+id/tvCategory"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/tvTransactionAmount"
-            android:layout_alignParentEnd="true"
-            android:layout_marginTop="6dp"
-            android:background="#22BB86FC"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="4dp"
-            android:text="Category"
-            android:textColor="@color/accent_purple"
-            android:textSize="10sp"
-            android:textStyle="bold" />
+            <TextView
+                android:id="@+id/tvTransactionAmount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:text="\u20B9 0.00"
+                android:textColor="@color/accent_red"
+                android:textSize="14sp" />
 
+            <TextView
+                android:id="@+id/tvCategory"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_chip"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:text="Category"
+                android:textColor="@color/accent_purple"
+                android:textSize="9sp" />
+        </LinearLayout>
     </RelativeLayout>
 </com.google.android.material.card.MaterialCardView>
