@@ -35,5 +35,12 @@ public class WealthFlowApplication extends Application {
         // (which can fire before any activity has touched the locator) get a
         // ready-to-use instance.
         ServiceLocator.initialize(this);
+
+        // Create notification channels (idempotent — safe to call every launch).
+        NotificationHelper.createChannels(this);
+
+        // Schedule the daily budget check worker (idempotent — ExistingPeriodicWorkPolicy.KEEP
+        // ensures it doesn't duplicate if already enqueued).
+        BudgetCheckWorker.enqueue(this);
     }
 }

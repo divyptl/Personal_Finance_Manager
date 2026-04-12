@@ -142,6 +142,9 @@ dependencies {
     annotationProcessor("androidx.room:room-compiler:$room_version")
     implementation("androidx.room:room-common:$room_version")
 
+    // WorkManager (daily budget checks)
+    implementation("androidx.work:work-runtime:2.9.1")
+
     // Charts
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 

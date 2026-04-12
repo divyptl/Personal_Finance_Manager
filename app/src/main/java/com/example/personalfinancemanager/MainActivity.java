@@ -108,6 +108,14 @@ public class MainActivity extends AppCompatActivity {
 
         btnOpenPortfolio.setOnClickListener(v ->
                 startActivity(new Intent(this, PortfolioActivity.class)));
+
+        View btnOpenBudgets = findViewById(R.id.btnOpenBudgets);
+        btnOpenBudgets.setOnClickListener(v ->
+                startActivity(new Intent(this, BudgetActivity.class)));
+
+        View btnOpenAnalytics = findViewById(R.id.btnOpenAnalytics);
+        btnOpenAnalytics.setOnClickListener(v ->
+                startActivity(new Intent(this, AnalyticsActivity.class)));
     }
 
     private void setupMonthSpinner() {

@@ -39,6 +39,14 @@
             android:name=".PortfolioActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".BudgetActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".AnalyticsActivity"
+            android:exported="false" />
+
         <!--
             Receives the OAuth2 redirect from Upstox. The scheme/host pair must
             match BuildConfig.UPSTOX_REDIRECT_URI and the redirect URI configured

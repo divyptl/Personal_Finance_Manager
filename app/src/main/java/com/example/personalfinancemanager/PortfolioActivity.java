@@ -272,22 +272,41 @@ public class PortfolioActivity extends AppCompatActivity {
             return;
         }
 
-        // Both connected (or neither) — let the user pick.
-        CharSequence[] options = new CharSequence[] {
-                getString(R.string.broker_angel_one),
-                getString(R.string.broker_upstox)
-        };
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.dialog_choose_broker_title)
-                .setMessage(angelConfigured
-                        ? R.string.dialog_choose_broker_message        // both linked
-                        : R.string.dialog_choose_broker_setup_message) // neither linked
-                .setItems(options, (dialog, which) -> {
-                    if (which == 0) syncAngelOneHoldings();
-                    else            syncUpstoxHoldings();
-                })
-                .setNegativeButton(R.string.action_cancel, null)
-                .show();
+        // Both connected → offer individual + "Sync Both" option.
+        // Neither connected → offer setup options.
+        // NOTE: AlertDialog.setMessage() and setItems() are mutually exclusive —
+        // setMessage() hides the list. Use setTitle() only for the header text.
+        if (angelConfigured) {
+            // Both linked — show 3 options including "Sync Both"
+            CharSequence[] options = new CharSequence[]{
+                    getString(R.string.broker_angel_one),
+                    getString(R.string.broker_upstox),
+                    getString(R.string.broker_sync_both)
+            };
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.dialog_choose_broker_message)
+                    .setItems(options, (dialog, which) -> {
+                        if (which == 0) syncAngelOneHoldings();
+                        else if (which == 1) syncUpstoxHoldings();
+                        else { syncAngelOneHoldings(); syncUpstoxHoldings(); }
+                    })
+                    .setNegativeButton(R.string.action_cancel, null)
+                    .show();
+        } else {
+            // Neither linked — setup chooser
+            CharSequence[] options = new CharSequence[]{
+                    getString(R.string.broker_angel_one),
+                    getString(R.string.broker_upstox)
+            };
+            new AlertDialog.Builder(this)
+                    .setTitle(R.string.dialog_choose_broker_setup_message)
+                    .setItems(options, (dialog, which) -> {
+                        if (which == 0) syncAngelOneHoldings();
+                        else syncUpstoxHoldings();
+                    })
+                    .setNegativeButton(R.string.action_cancel, null)
+                    .show();
+        }
     }
 
     private void syncAngelOneHoldings() {

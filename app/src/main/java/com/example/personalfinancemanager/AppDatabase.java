@@ -9,10 +9,11 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-@Database(entities = {Transaction.class, Stock.class}, version = 4, exportSchema = false)
+@Database(entities = {Transaction.class, Stock.class, Budget.class}, version = 6, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract TransactionDao transactionDao();
     public abstract StockDao stockDao();
+    public abstract BudgetDao budgetDao();
 
     private static volatile AppDatabase INSTANCE;
 
