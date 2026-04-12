@@ -1,0 +1,31 @@
+# ============================================================
+# WealthFlow — local.properties template
+# ============================================================
+# Copy this file to local.properties and fill in your own values.
+# local.properties is gitignored — NEVER commit the real file.
+# Each developer only needs the keys for the features they work on.
+# ============================================================
+
+# Android SDK path (auto-set by Android Studio — usually already present)
+sdk.dir=/path/to/your/Android/Sdk
+
+# ---- Angel One Smart API ----
+# Required only if you work on the Angel One broker integration.
+# Get yours at: https://smartapi.angelbroking.com/
+ANGELONE_API_KEY=YOUR_ANGEL_ONE_API_KEY_HERE
+
+# SSL certificate pin for Angel One (optional — leave blank to disable pinning)
+# Generate with: openssl s_client -servername apiconnect.angelbroking.com \
+#   -connect apiconnect.angelbroking.com:443 < /dev/null 2>/dev/null \
+#   | openssl x509 -pubkey -noout | openssl pkey -pubin -outform der \
+#   | openssl dgst -sha256 -binary | openssl enc -base64
+# Then prefix with "sha256/" and paste below.
+ANGELONE_CERT_PIN=
+
+# ---- Upstox OAuth2 ----
+# Required only if you work on the Upstox broker integration.
+# Register your app at: https://account.upstox.com/developer/apps
+# The redirect URI in the developer portal MUST exactly match UPSTOX_REDIRECT_URI.
+UPSTOX_CLIENT_ID=YOUR_UPSTOX_CLIENT_ID_HERE
+UPSTOX_CLIENT_SECRET=YOUR_UPSTOX_CLIENT_SECRET_HERE
+UPSTOX_REDIRECT_URI=wealthflow://upstox/callback
