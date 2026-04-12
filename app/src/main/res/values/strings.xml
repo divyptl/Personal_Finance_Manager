@@ -5,14 +5,18 @@
     <string name="label_personal_finance">PERSONAL FINANCE</string>
     <string name="label_wealth_manager">Wealth Manager</string>
     <string name="label_total_expenses">Total Expenses</string>
+    <string name="label_net_amount">Net Amount</string>
     <string name="label_invested_net_worth">Invested Net Worth</string>
     <string name="label_recent_transactions">Recent Transactions</string>
-    <string name="label_view_portfolio">View Stock Portfolio</string>
+    <string name="label_view_portfolio">Portfolio</string>
     <string name="label_no_transactions">No transactions yet</string>
     <string name="label_sms_hint">Transactions from bank SMS will appear here</string>
     <string name="label_expenses_short">Expenses</string>
-    <string name="label_tap_net_worth">Tap to view net worth</string>
-    <string name="label_tap_expenses">Tap to view expenses</string>
+    <string name="label_swipe_hint_net">\u2190 Net Amount</string>
+    <string name="label_swipe_hint_portfolio">Net Worth \u2192</string>
+    <string name="label_swipe_hint_expenses">\u2190 Expenses</string>
+    <string name="label_net_outflow">Net Outflow</string>
+    <string name="label_net_inflow">Net Inflow</string>
 
     <!-- Portfolio Screen -->
     <string name="label_portfolio">Portfolio</string>

@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -44,13 +46,20 @@ public class MainActivity extends AppCompatActivity {
     private TransactionViewModel transactionViewModel;
     private TransactionAdapter adapter;
 
+    private static final int CARD_EXPENSES    = 0;
+    private static final int CARD_NET_AMOUNT  = 1;
+    private static final int CARD_NET_WORTH   = 2;
+    private static final int CARD_STATE_COUNT = 3;
+
     private TextView textTotalBalance, textCardTitle, textSwipeHint;
+    private View[] dots;
     private PieChart pieChart;
     private Spinner spinnerMonth;
 
     private double currentMonthExpenses = 0.0;
+    private double currentMonthIncome   = 0.0;
     private double totalPortfolioInvested = 0.0;
-    private boolean isShowingPortfolio = false;
+    private int cardState = CARD_EXPENSES;
 
     private final List<Long> startDates = new ArrayList<>();
     private final List<Long> endDates = new ArrayList<>();
@@ -167,32 +176,121 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    @SuppressWarnings("ClickableViewAccessibility")
     private void setupSwipeListener() {
         View cardBalance = findViewById(R.id.cardBalance);
-        cardBalance.setOnClickListener(v -> {
-            isShowingPortfolio = !isShowingPortfolio;
-            updateCardDisplay();
+
+        dots = new View[]{
+                findViewById(R.id.dot0),
+                findViewById(R.id.dot1),
+                findViewById(R.id.dot2)
+        };
+
+        GestureDetector gestureDetector = new GestureDetector(this,
+                new GestureDetector.SimpleOnGestureListener() {
+                    private static final int SWIPE_THRESHOLD = 80;
+                    private static final int VELOCITY_THRESHOLD = 100;
+
+                    @Override
+                    public boolean onFling(MotionEvent e1, MotionEvent e2,
+                                           float velocityX, float velocityY) {
+                        if (e1 == null || e2 == null) return false;
+                        float dx = e2.getX() - e1.getX();
+                        if (Math.abs(dx) < SWIPE_THRESHOLD
+                                || Math.abs(velocityX) < VELOCITY_THRESHOLD) return false;
+
+                        if (dx < 0) {
+                            // Swipe left → next state
+                            cardState = (cardState + 1) % CARD_STATE_COUNT;
+                        } else {
+                            // Swipe right → previous state
+                            cardState = (cardState - 1 + CARD_STATE_COUNT) % CARD_STATE_COUNT;
+                        }
+                        updateCardDisplay();
+                        return true;
+                    }
+
+                    @Override
+                    public boolean onSingleTapUp(MotionEvent e) {
+                        // Tap also cycles forward (backwards-compatible)
+                        cardState = (cardState + 1) % CARD_STATE_COUNT;
+                        updateCardDisplay();
+                        return true;
+                    }
+
+                    @Override
+                    public boolean onDown(MotionEvent e) { return true; }
+                });
+
+        cardBalance.setOnTouchListener((v, event) -> {
+            gestureDetector.onTouchEvent(event);
+            return true;
         });
     }
 
     private void updateCardDisplay() {
-        if (!isShowingPortfolio) {
-            textCardTitle.setText(R.string.label_total_expenses);
-            textTotalBalance.setText(String.format(Locale.getDefault(), "\u20B9%.2f", currentMonthExpenses));
-            textTotalBalance.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
-            textSwipeHint.setText(R.string.label_tap_net_worth);
-        } else {
-            textCardTitle.setText(R.string.label_invested_net_worth);
-            double netWorth = totalPortfolioInvested - currentMonthExpenses;
-            textTotalBalance.setText(String.format(Locale.getDefault(), "\u20B9%.2f", netWorth));
-            int color = netWorth >= 0 ? R.color.accent_green : R.color.accent_red;
-            textTotalBalance.setTextColor(ContextCompat.getColor(this, color));
-            textSwipeHint.setText(R.string.label_tap_expenses);
+        switch (cardState) {
+            case CARD_EXPENSES:
+                textCardTitle.setText(R.string.label_total_expenses);
+                textTotalBalance.setText(formatCurrency(currentMonthExpenses));
+                textTotalBalance.setTextColor(
+                        ContextCompat.getColor(this, R.color.text_primary));
+                textSwipeHint.setText(R.string.label_swipe_hint_net);
+                break;
+
+            case CARD_NET_AMOUNT:
+                double net = currentMonthExpenses - currentMonthIncome;
+                boolean isOutflow = net >= 0;
+                textCardTitle.setText(isOutflow
+                        ? R.string.label_net_outflow : R.string.label_net_inflow);
+                textTotalBalance.setText(formatCurrency(Math.abs(net)));
+                textTotalBalance.setTextColor(ContextCompat.getColor(this,
+                        isOutflow ? R.color.accent_red : R.color.accent_green));
+                textSwipeHint.setText(R.string.label_swipe_hint_portfolio);
+                break;
+
+            case CARD_NET_WORTH:
+                textCardTitle.setText(R.string.label_invested_net_worth);
+                double netWorth = totalPortfolioInvested - currentMonthExpenses
+                        + currentMonthIncome;
+                textTotalBalance.setText(formatCurrency(Math.abs(netWorth)));
+                textTotalBalance.setTextColor(ContextCompat.getColor(this,
+                        netWorth >= 0 ? R.color.accent_green : R.color.accent_red));
+                textSwipeHint.setText(R.string.label_swipe_hint_expenses);
+                break;
         }
+        updateDots();
+    }
+
+    private void updateDots() {
+        for (int i = 0; i < dots.length; i++) {
+            boolean active = (i == cardState);
+            dots[i].setBackgroundResource(active
+                    ? R.drawable.bg_dot_active : R.drawable.bg_dot_inactive);
+            // Active dot is slightly larger
+            int size = active ? dpToPx(8) : dpToPx(6);
+            dots[i].getLayoutParams().width = size;
+            dots[i].getLayoutParams().height = size;
+            dots[i].requestLayout();
+        }
+    }
+
+    private int dpToPx(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private String formatCurrency(double amount) {
+        if (amount >= 10000000) {
+            return String.format(Locale.getDefault(), "\u20B9%.2f Cr", amount / 10000000);
+        } else if (amount >= 100000) {
+            return String.format(Locale.getDefault(), "\u20B9%.2f L", amount / 100000);
+        }
+        return String.format(Locale.getDefault(), "\u20B9%.2f", amount);
     }
 
     private void calculateDashboard(List<Transaction> transactions) {
         currentMonthExpenses = 0.0;
+        currentMonthIncome = 0.0;
         Map<String, Float> categoryMap = new HashMap<>();
 
         for (Transaction t : transactions) {
@@ -202,6 +300,8 @@ public class MainActivity extends AppCompatActivity {
                 String category = t.getCategory() != null ? t.getCategory() : "Other";
                 float current = categoryMap.getOrDefault(category, 0f);
                 categoryMap.put(category, current + (float) t.getAmount());
+            } else if (type != null && (type.equalsIgnoreCase("Credit") || type.equalsIgnoreCase("income"))) {
+                currentMonthIncome += t.getAmount();
             }
         }
 

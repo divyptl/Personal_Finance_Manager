@@ -102,7 +102,7 @@
                         android:textSize="30sp" />
                 </LinearLayout>
 
-                <!-- Swipe indicators -->
+                <!-- Swipe hint -->
                 <TextView
                     android:id="@+id/textSwipeHint"
                     android:layout_width="wrap_content"
@@ -113,6 +113,37 @@
                     android:textColor="@color/accent_purple"
                     android:textSize="10sp" />
             </RelativeLayout>
+
+            <!-- Page indicator dots -->
+            <LinearLayout
+                android:id="@+id/dotIndicator"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/dot0"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:layout_marginHorizontal="4dp"
+                    android:background="@drawable/bg_dot_active" />
+
+                <View
+                    android:id="@+id/dot1"
+                    android:layout_width="6dp"
+                    android:layout_height="6dp"
+                    android:layout_marginHorizontal="4dp"
+                    android:background="@drawable/bg_dot_inactive" />
+
+                <View
+                    android:id="@+id/dot2"
+                    android:layout_width="6dp"
+                    android:layout_height="6dp"
+                    android:layout_marginHorizontal="4dp"
+                    android:background="@drawable/bg_dot_inactive" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- PIE CHART -->
