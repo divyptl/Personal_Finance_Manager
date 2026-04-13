@@ -28,4 +28,7 @@ ANGELONE_CERT_PIN=
 # The redirect URI in the developer portal MUST exactly match UPSTOX_REDIRECT_URI.
 UPSTOX_CLIENT_ID=YOUR_UPSTOX_CLIENT_ID_HERE
 UPSTOX_CLIENT_SECRET=YOUR_UPSTOX_CLIENT_SECRET_HERE
-UPSTOX_REDIRECT_URI=wealthflow://upstox/callback
+# The redirect URI must be a valid https:// URL registered in the Upstox developer portal.
+# The app uses a WebView and intercepts this URL itself — it does NOT need to be a real server.
+# Recommended: https://wealthflow.app/callback
+UPSTOX_REDIRECT_URI=https://wealthflow.app/callback

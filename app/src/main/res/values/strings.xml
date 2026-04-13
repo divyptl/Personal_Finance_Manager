@@ -128,7 +128,8 @@
     <string name="broker_angel_one">Angel One (TOTP login)</string>
     <string name="broker_upstox">Upstox (browser login)</string>
     <string name="broker_sync_both">Sync Both</string>
-    <string name="toast_upstox_connected">Upstox connected</string>
+    <string name="label_upstox_login">Upstox Login</string>
+    <string name="toast_upstox_connected">Upstox connected!</string>
     <string name="toast_upstox_opening">Opening Upstox login…</string>
     <string name="error_upstox_no_code">Upstox login cancelled</string>
     <string name="error_upstox_oauth">Upstox login error: %1$s</string>

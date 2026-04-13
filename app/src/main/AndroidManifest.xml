@@ -48,22 +48,14 @@
             android:exported="false" />
 
         <!--
-            Receives the OAuth2 redirect from Upstox. The scheme/host pair must
-            match BuildConfig.UPSTOX_REDIRECT_URI and the redirect URI configured
-            in the Upstox developer portal.
+            Hosts the Upstox OAuth2 login page in a WebView and intercepts
+            the redirect URI before it ever leaves the app. No custom scheme
+            needed — register any https:// URL in the Upstox developer portal
+            and set the same value as UPSTOX_REDIRECT_URI in local.properties.
         -->
         <activity
-            android:name=".UpstoxOAuthCallbackActivity"
-            android:exported="true"
-            android:launchMode="singleTask"
-            android:taskAffinity="">
-            <intent-filter android:autoVerify="false">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="wealthflow" android:host="upstox" />
-            </intent-filter>
-        </activity>
+            android:name=".UpstoxLoginActivity"
+            android:exported="false" />
 
         <activity
             android:name=".MainActivity"

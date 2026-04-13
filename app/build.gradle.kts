@@ -73,7 +73,7 @@ android {
         buildConfigField(
             "String",
             "UPSTOX_REDIRECT_URI",
-            "\"${secret("UPSTOX_REDIRECT_URI", "wealthflow://upstox/callback")}\""
+            "\"${secret("UPSTOX_REDIRECT_URI", "https://wealthflow.app/callback")}\""
         )
     }
 

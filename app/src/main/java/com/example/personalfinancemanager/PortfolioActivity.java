@@ -53,6 +53,21 @@ public class PortfolioActivity extends AppCompatActivity {
                 }
             });
 
+    private final ActivityResultLauncher<Intent> upstoxLoginLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() == RESULT_OK) {
+                    // Login succeeded — now sync holdings
+                    syncUpstoxHoldings();
+                } else {
+                    String error = result.getData() != null
+                            ? result.getData().getStringExtra(UpstoxLoginActivity.EXTRA_ERROR)
+                            : null;
+                    if (error != null) {
+                        toast(getString(R.string.error_upstox_auth, error));
+                    }
+                }
+            });
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -368,19 +383,11 @@ public class PortfolioActivity extends AppCompatActivity {
     }
 
     private void launchUpstoxOAuth() {
-        String url = upstoxBrokerApi.buildAuthorizationUrl();
-        if (url == null) {
+        if (BuildConfig.UPSTOX_CLIENT_ID.isEmpty()) {
             toast(R.string.error_upstox_not_configured);
             return;
         }
-        try {
-            toast(R.string.toast_upstox_opening);
-            Intent browser = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-            browser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(browser);
-        } catch (android.content.ActivityNotFoundException e) {
-            toast(R.string.error_upstox_no_browser);
-        }
+        upstoxLoginLauncher.launch(new Intent(this, UpstoxLoginActivity.class));
     }
 
     // ==================== LIVE PRICES ====================
