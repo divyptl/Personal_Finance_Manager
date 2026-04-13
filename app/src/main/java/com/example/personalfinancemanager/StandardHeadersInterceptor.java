@@ -22,6 +22,8 @@ import okhttp3.Response;
  */
 public class StandardHeadersInterceptor implements Interceptor {
 
+    private static final String ANGEL_HOST = "apiconnect.angelbroking.com";
+
     private final String localIp;
 
     public StandardHeadersInterceptor(String localIp) {
@@ -32,6 +34,13 @@ public class StandardHeadersInterceptor implements Interceptor {
     @Override
     public Response intercept(@NonNull Chain chain) throws IOException {
         Request original = chain.request();
+
+        // Angel-One specific headers must not leak to other brokers (Upstox,
+        // etc.) that share the same OkHttpClient. Scope the header injection
+        // to requests that actually go to Angel One's host.
+        if (!ANGEL_HOST.equalsIgnoreCase(original.url().host())) {
+            return chain.proceed(original);
+        }
 
         // Don't override headers the caller explicitly set (e.g. multipart
         // Content-Type), only add those that are missing.

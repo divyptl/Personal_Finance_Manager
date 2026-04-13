@@ -5,14 +5,18 @@
     <string name="label_personal_finance">PERSONAL FINANCE</string>
     <string name="label_wealth_manager">Wealth Manager</string>
     <string name="label_total_expenses">Total Expenses</string>
+    <string name="label_net_amount">Net Amount</string>
     <string name="label_invested_net_worth">Invested Net Worth</string>
     <string name="label_recent_transactions">Recent Transactions</string>
-    <string name="label_view_portfolio">View Stock Portfolio</string>
+    <string name="label_view_portfolio">Portfolio</string>
     <string name="label_no_transactions">No transactions yet</string>
     <string name="label_sms_hint">Transactions from bank SMS will appear here</string>
     <string name="label_expenses_short">Expenses</string>
-    <string name="label_tap_net_worth">Tap to view net worth</string>
-    <string name="label_tap_expenses">Tap to view expenses</string>
+    <string name="label_swipe_hint_net">\u2190 Net Amount</string>
+    <string name="label_swipe_hint_portfolio">Net Worth \u2192</string>
+    <string name="label_swipe_hint_expenses">\u2190 Expenses</string>
+    <string name="label_net_outflow">Net Outflow</string>
+    <string name="label_net_inflow">Net Inflow</string>
 
     <!-- Portfolio Screen -->
     <string name="label_portfolio">Portfolio</string>
@@ -117,11 +121,52 @@
     <string name="error_pdf_failed">Failed to parse PDF: %1$s</string>
     <string name="error_sync_failed">Sync failed: %1$s</string>
 
+    <!-- Upstox OAuth2 -->
+    <string name="dialog_choose_broker_title">Sync holdings</string>
+    <string name="dialog_choose_broker_message">Both brokers are linked. Pick which one to sync from.</string>
+    <string name="dialog_choose_broker_setup_message">No broker linked yet. Pick one to connect.</string>
+    <string name="broker_angel_one">Angel One (TOTP login)</string>
+    <string name="broker_upstox">Upstox (browser login)</string>
+    <string name="broker_sync_both">Sync Both</string>
+    <string name="toast_upstox_connected">Upstox connected</string>
+    <string name="toast_upstox_opening">Opening Upstox login…</string>
+    <string name="error_upstox_no_code">Upstox login cancelled</string>
+    <string name="error_upstox_oauth">Upstox login error: %1$s</string>
+    <string name="error_upstox_auth">Upstox authentication failed: %1$s</string>
+    <string name="error_upstox_not_configured">Upstox client ID not set. Add UPSTOX_CLIENT_ID to local.properties and rebuild.</string>
+    <string name="error_upstox_no_browser">No browser installed to open the Upstox login page.</string>
+
+    <!-- Budget Screen -->
+    <string name="label_budget_title">Budget Limits</string>
+    <string name="label_budget_description">Set monthly spending limits per category. You\'ll get a notification when you\'re close to (80%) or over your limit.</string>
+    <string name="label_no_budgets">No budgets set</string>
+    <string name="label_no_budgets_hint">Tap + to add a spending limit for a category</string>
+    <string name="label_monthly_limit">Monthly limit (\u20B9)</string>
+    <string name="label_manage_budgets">Manage Budgets</string>
+    <string name="dialog_add_budget_title">Set Budget Limit</string>
+    <string name="dialog_delete_budget_title">Remove %1$s budget?</string>
+    <string name="dialog_delete_budget_message">This will remove the monthly spending limit for this category.</string>
+    <string name="toast_budget_set">%1$s budget set!</string>
+    <string name="error_budget_limit_required">Enter a monthly limit amount</string>
+
+    <!-- Analytics Screen -->
+    <string name="label_analytics_title">Analytics</string>
+    <string name="label_monthly_trend">Monthly Trend</string>
+    <string name="label_category_breakdown">Category Breakdown</string>
+    <string name="label_no_analytics_data">Not enough data yet</string>
+    <string name="label_no_analytics_hint">Transactions will appear here once recorded</string>
+    <string name="label_view_analytics">View Analytics</string>
+    <string name="label_income">Income</string>
+    <string name="label_expenses">Expenses</string>
+
     <!-- Accessibility (content descriptions) -->
     <string name="cd_reset">Clear all transactions</string>
     <string name="cd_back">Back</string>
     <string name="cd_sync">Sync holdings from broker</string>
     <string name="cd_settings">Account settings</string>
     <string name="cd_add_stock">Add a new stock</string>
+    <string name="cd_add_budget">Add a budget limit</string>
     <string name="cd_pie_chart">Pie chart of expenses by category</string>
+    <string name="cd_line_chart">Line chart of monthly spending trends</string>
+    <string name="cd_bar_chart">Bar chart of category spending by month</string>
 </resources>

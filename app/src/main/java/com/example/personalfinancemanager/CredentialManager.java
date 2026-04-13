@@ -36,6 +36,11 @@ public class CredentialManager {
     private static final String KEY_JWT_TOKEN       = "jwt_token";
     private static final String KEY_TOKEN_TIMESTAMP = "token_timestamp";
 
+    // Upstox OAuth2 access token — separate namespace so Angel One logout
+    // doesn't clear Upstox state and vice-versa.
+    private static final String KEY_UPSTOX_TOKEN     = "upstox_access_token";
+    private static final String KEY_UPSTOX_TIMESTAMP = "upstox_token_timestamp";
+
     private final SharedPreferences prefs;
     private final boolean encrypted;
 
@@ -117,6 +122,25 @@ public class CredentialManager {
         prefs.edit()
                 .remove(KEY_JWT_TOKEN)
                 .remove(KEY_TOKEN_TIMESTAMP)
+                .apply();
+    }
+
+    // --- Upstox OAuth2 access token persistence ---
+
+    public void saveUpstoxToken(String token, long timestamp) {
+        prefs.edit()
+                .putString(KEY_UPSTOX_TOKEN, token)
+                .putLong(KEY_UPSTOX_TIMESTAMP, timestamp)
+                .apply();
+    }
+
+    public String getUpstoxToken()        { return prefs.getString(KEY_UPSTOX_TOKEN, ""); }
+    public long getUpstoxTokenTimestamp() { return prefs.getLong(KEY_UPSTOX_TIMESTAMP, 0); }
+
+    public void clearUpstoxToken() {
+        prefs.edit()
+                .remove(KEY_UPSTOX_TOKEN)
+                .remove(KEY_UPSTOX_TIMESTAMP)
                 .apply();
     }
 

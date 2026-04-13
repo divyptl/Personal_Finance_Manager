@@ -1,0 +1,137 @@
+package com.example.personalfinancemanager;
+
+import android.os.Bundle;
+import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.Spinner;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Allows the user to create, view, and delete monthly budget limits per
+ * expense category. Each budget row shows a progress bar with the current
+ * month's spending vs. the limit, colour-coded green / amber / red.
+ */
+public class BudgetActivity extends AppCompatActivity {
+
+    /** Pre-defined expense categories matching those produced by SmsTransactionParser. */
+    private static final String[] CATEGORIES = {
+            "Food", "Shopping", "Travel", "Entertainment", "Bills",
+            "Groceries", "Health", "Education", "Transfer", "Other"
+    };
+
+    private BudgetAdapter adapter;
+    private View emptyState;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_budget);
+
+        ImageButton btnBack = findViewById(R.id.btnBack);
+        RecyclerView recycler = findViewById(R.id.recyclerBudgets);
+        emptyState = findViewById(R.id.emptyState);
+        FloatingActionButton fab = findViewById(R.id.fabAddBudget);
+
+        recycler.setLayoutManager(new LinearLayoutManager(this));
+        adapter = new BudgetAdapter();
+        recycler.setAdapter(adapter);
+
+        adapter.setOnBudgetLongClickListener((budget, pos) ->
+                new AlertDialog.Builder(this)
+                        .setTitle(getString(R.string.dialog_delete_budget_title, budget.getCategory()))
+                        .setMessage(R.string.dialog_delete_budget_message)
+                        .setPositiveButton(R.string.action_remove, (d, w) ->
+                                AppDatabase.databaseWriteExecutor.execute(() ->
+                                        AppDatabase.getDatabase(this).budgetDao()
+                                                .deleteBudget(budget.getCategory())))
+                        .setNegativeButton(R.string.action_cancel, null)
+                        .show());
+
+        // Observe budgets and spending
+        AppDatabase db = AppDatabase.getDatabase(this);
+        db.budgetDao().getAllBudgets().observe(this, budgets -> {
+            adapter.setBudgets(budgets);
+            boolean empty = budgets == null || budgets.isEmpty();
+            emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
+            recycler.setVisibility(empty ? View.GONE : View.VISIBLE);
+
+            // Load current spending for each budget category
+            if (budgets != null && !budgets.isEmpty()) {
+                loadSpending(budgets);
+            }
+        });
+
+        btnBack.setOnClickListener(v -> finish());
+        fab.setOnClickListener(v -> showAddBudgetDialog());
+    }
+
+    private void loadSpending(List<Budget> budgets) {
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            long monthStart = BudgetChecker.startOfCurrentMonth();
+            List<CategorySum> sums = AppDatabase.getDatabase(this)
+                    .transactionDao().getCategoryExpensesSinceSync(monthStart);
+            Map<String, Double> spentMap = new HashMap<>();
+            if (sums != null) {
+                for (CategorySum cs : sums) {
+                    spentMap.put(cs.category, cs.total);
+                }
+            }
+            runOnUiThread(() -> adapter.setSpentMap(spentMap));
+        });
+    }
+
+    private void showAddBudgetDialog() {
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_add_budget, null);
+        Spinner spinnerCategory = dialogView.findViewById(R.id.spinnerCategory);
+        EditText inputLimit = dialogView.findViewById(R.id.inputLimit);
+
+        ArrayAdapter<String> catAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_dropdown_item, CATEGORIES);
+        spinnerCategory.setAdapter(catAdapter);
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_add_budget_title)
+                .setView(dialogView)
+                .setPositiveButton(R.string.action_add, (dialog, which) -> {
+                    String category = spinnerCategory.getSelectedItem().toString();
+                    String limitStr = inputLimit.getText().toString().trim();
+                    if (limitStr.isEmpty()) {
+                        Toast.makeText(this, R.string.error_budget_limit_required,
+                                Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    try {
+                        double limit = Double.parseDouble(limitStr);
+                        if (limit <= 0) {
+                            Toast.makeText(this, R.string.error_positive_numbers,
+                                    Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        AppDatabase.databaseWriteExecutor.execute(() ->
+                                AppDatabase.getDatabase(this).budgetDao()
+                                        .insertOrUpdate(new Budget(category, limit)));
+                        Toast.makeText(this,
+                                getString(R.string.toast_budget_set, category),
+                                Toast.LENGTH_SHORT).show();
+                    } catch (NumberFormatException e) {
+                        Toast.makeText(this, R.string.error_invalid_number,
+                                Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
+    }
+}

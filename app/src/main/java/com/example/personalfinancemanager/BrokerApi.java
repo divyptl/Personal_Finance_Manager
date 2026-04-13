@@ -46,4 +46,39 @@ public interface BrokerApi {
 
     /** Forgets the current session token (server-side logout is best-effort). */
     void logout();
+
+    // ------------------------------------------------------------------
+    // Optional OAuth2 hooks. Brokers that authenticate via TOTP (Angel One)
+    // can ignore these; brokers that authenticate via OAuth2 redirect flow
+    // (Upstox) override them.
+    // ------------------------------------------------------------------
+
+    /** True if this broker uses an OAuth2 web redirect to log in. */
+    default boolean usesOAuthLogin() {
+        return false;
+    }
+
+    /**
+     * Returns the authorization URL the app should open in a browser /
+     * Custom Tab. Only meaningful when {@link #usesOAuthLogin()} is true.
+     * A null return means OAuth is not configured (e.g. missing client id).
+     */
+    @androidx.annotation.Nullable
+    default String buildAuthorizationUrl() {
+        return null;
+    }
+
+    /**
+     * Exchanges an OAuth2 authorization code (captured by the redirect
+     * handler) for an access token. Only meaningful when
+     * {@link #usesOAuthLogin()} is true.
+     */
+    default void completeOAuthLogin(String authorizationCode, AuthCallback callback) {
+        callback.onFailure("OAuth not supported by this broker");
+    }
+
+    /** Stable machine-readable identifier, e.g. "AngelOne" or "Upstox". */
+    default String brokerId() {
+        return getClass().getSimpleName();
+    }
 }

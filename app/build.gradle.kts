@@ -54,6 +54,27 @@ android {
             "ANGELONE_CERT_PIN",
             "\"${secret("ANGELONE_CERT_PIN", "")}\""
         )
+
+        // ---- Upstox OAuth2 ----
+        // Obtain these by registering an app at https://account.upstox.com/developer/apps
+        // and pasting the generated values into local.properties. The redirect URI
+        // in the developer portal MUST exactly match UPSTOX_REDIRECT_URI below and
+        // match the <data> element in UpstoxOAuthCallbackActivity's intent-filter.
+        buildConfigField(
+            "String",
+            "UPSTOX_CLIENT_ID",
+            "\"${secret("UPSTOX_CLIENT_ID", "")}\""
+        )
+        buildConfigField(
+            "String",
+            "UPSTOX_CLIENT_SECRET",
+            "\"${secret("UPSTOX_CLIENT_SECRET", "")}\""
+        )
+        buildConfigField(
+            "String",
+            "UPSTOX_REDIRECT_URI",
+            "\"${secret("UPSTOX_REDIRECT_URI", "wealthflow://upstox/callback")}\""
+        )
     }
 
     buildFeatures {
@@ -120,6 +141,9 @@ dependencies {
     implementation("androidx.room:room-runtime:$room_version")
     annotationProcessor("androidx.room:room-compiler:$room_version")
     implementation("androidx.room:room-common:$room_version")
+
+    // WorkManager (daily budget checks)
+    implementation("androidx.work:work-runtime:2.9.1")
 
     // Charts
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")

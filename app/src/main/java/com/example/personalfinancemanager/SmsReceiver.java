@@ -53,6 +53,15 @@ public class SmsReceiver extends BroadcastReceiver {
                 );
                 if (txn != null) {
                     repository.insert(txn);
+                    // Check budget limit in real-time after every expense
+                    if ("expense".equals(txn.getType()) && txn.getCategory() != null) {
+                        try {
+                            BudgetChecker.checkCategoryAfterInsert(
+                                    context, txn.getCategory());
+                        } catch (Throwable t) {
+                            Log.w(TAG, "Budget check failed", t);
+                        }
+                    }
                 }
             } catch (Throwable t) {
                 // Never let a malformed SMS crash the receiver — it would be

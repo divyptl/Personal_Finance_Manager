@@ -31,8 +31,10 @@ public final class ServiceLocator {
     private final Application application;
     private final CredentialManager credentialManager;
     private final AngelOneTokenManager tokenManager;
+    private final UpstoxTokenManager upstoxTokenManager;
     private final NetworkModule networkModule;
-    private final BrokerApi brokerApi;
+    private final BrokerApi brokerApi;            // Angel One (legacy default)
+    private final BrokerApi upstoxBrokerApi;      // Upstox
     private final TransactionRepository transactionRepository;
     private final StockRepository stockRepository;
     private final SmsTransactionParser smsParser;
@@ -41,11 +43,19 @@ public final class ServiceLocator {
         this.application = application;
         this.credentialManager = new CredentialManager(application);
         this.tokenManager = new AngelOneTokenManager(credentialManager);
+        this.upstoxTokenManager = new UpstoxTokenManager(credentialManager);
         this.networkModule = new NetworkModule();
         this.brokerApi = new AngelOneBrokerApi(
                 credentialManager,
                 tokenManager,
                 networkModule.okHttpClient()
+        );
+        this.upstoxBrokerApi = new UpstoxBrokerApi(
+                upstoxTokenManager,
+                networkModule.okHttpClient(),
+                BuildConfig.UPSTOX_CLIENT_ID,
+                BuildConfig.UPSTOX_CLIENT_SECRET,
+                BuildConfig.UPSTOX_REDIRECT_URI
         );
         this.transactionRepository = new TransactionRepository(application);
         this.stockRepository = new StockRepository(application);
@@ -84,7 +94,9 @@ public final class ServiceLocator {
 
     public CredentialManager credentialManager() { return credentialManager; }
     public AngelOneTokenManager tokenManager()   { return tokenManager; }
+    public UpstoxTokenManager upstoxTokenManager() { return upstoxTokenManager; }
     public BrokerApi brokerApi()                 { return brokerApi; }
+    public BrokerApi upstoxBrokerApi()           { return upstoxBrokerApi; }
     public TransactionRepository transactionRepository() { return transactionRepository; }
     public StockRepository stockRepository()     { return stockRepository; }
     public SmsTransactionParser smsParser()      { return smsParser; }

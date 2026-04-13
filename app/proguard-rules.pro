@@ -16,10 +16,17 @@
 }
 -dontwarn androidx.room.paging.**
 
-# ---- Our Room entities (Room reflects on them at runtime) ----
+# ---- Our Room entities and projections (Room reflects on them at runtime) ----
 -keep class com.example.personalfinancemanager.Transaction { *; }
 -keep class com.example.personalfinancemanager.Stock { *; }
+-keep class com.example.personalfinancemanager.Budget { *; }
 -keep class com.example.personalfinancemanager.CategorySum { *; }
+-keep class com.example.personalfinancemanager.MonthlyTotal { *; }
+-keep class com.example.personalfinancemanager.MonthlyCategoryTotal { *; }
+
+# ---- WorkManager (daily budget checks) ----
+-keep class * extends androidx.work.Worker { *; }
+-keep class * extends androidx.work.ListenableWorker { *; }
 
 # ---- Gson (uses reflection on field names) ----
 -keepattributes Signature
