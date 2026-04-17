@@ -198,7 +198,8 @@ public class MainActivity extends AppCompatActivity {
         Calendar cal = Calendar.getInstance();
         SimpleDateFormat sdf = new SimpleDateFormat("MMM yyyy", Locale.getDefault());
 
-        for (int i = 0; i < 6; i++) {
+        // Load 12 months of history so old transactions remain visible.
+        for (int i = 0; i < 12; i++) {
             Calendar endCal = (Calendar) cal.clone();
             endCal.set(Calendar.DAY_OF_MONTH, endCal.getActualMaximum(Calendar.DAY_OF_MONTH));
             endCal.set(Calendar.HOUR_OF_DAY, 23);
