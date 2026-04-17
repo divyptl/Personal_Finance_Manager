@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    CoordinatorLayout at the root so the FAB can float above the scroll content
+    and Snackbars (swipe-to-delete undo) anchor properly above the FAB.
+
+    SwipeRefreshLayout wraps the ENTIRE NestedScrollView so the user can pull
+    from anywhere on the screen — not just the transaction list area.
+    This also avoids the SwipeRefreshLayout + NestedScrollView + wrap_content
+    height-collapse bug that occurs when SwipeRefreshLayout is nested deep
+    inside a vertical LinearLayout.
+-->
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -7,289 +17,284 @@
     android:background="@color/bg_dark"
     android:fitsSystemWindows="true">
 
-    <androidx.core.widget.NestedScrollView
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefresh"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingBottom="88dp">
-
-        <!-- HEADER -->
-        <RelativeLayout
+        <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="20dp"
-            android:paddingTop="12dp"
-            android:paddingBottom="4dp">
+            android:layout_height="match_parent">
 
             <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:letterSpacing="0.15"
-                    android:text="@string/label_personal_finance"
-                    android:textAllCaps="true"
-                    android:textColor="@color/accent_purple"
-                    android:textSize="10sp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
-                    android:text="@string/label_wealth_manager"
-                    android:textColor="@color/text_primary"
-                    android:textSize="24sp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:orientation="horizontal">
-
-                <ImageButton
-                    android:id="@+id/btnSettings"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="@string/cd_settings"
-                    android:src="@android:drawable/ic_menu_preferences"
-                    app:tint="@color/text_tertiary" />
-
-                <ImageButton
-                    android:id="@+id/btnReset"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="@string/cd_reset"
-                    android:src="@android:drawable/ic_menu_delete"
-                    app:tint="@color/text_tertiary" />
-            </LinearLayout>
-        </RelativeLayout>
-
-        <!-- MONTH SELECTOR -->
-        <Spinner
-            android:id="@+id/spinnerMonth"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
-            android:layout_marginStart="20dp"
-            android:layout_marginTop="8dp"
-            android:backgroundTint="@color/accent_purple" />
-
-        <!-- SWIPEABLE BALANCE CARD -->
-        <LinearLayout
-            android:id="@+id/cardBalance"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/bg_balance_card"
-            android:orientation="vertical"
-            android:padding="22dp">
-
-            <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="88dp">
 
-                <LinearLayout
-                    android:layout_width="wrap_content"
+                <!-- HEADER -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:paddingHorizontal="20dp"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="4dp">
 
-                    <TextView
-                        android:id="@+id/textCardTitle"
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/label_total_expenses"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="13sp" />
+                        android:orientation="vertical">
 
-                    <TextView
-                        android:id="@+id/textTotalBalance"
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:letterSpacing="0.15"
+                            android:text="@string/label_personal_finance"
+                            android:textAllCaps="true"
+                            android:textColor="@color/accent_purple"
+                            android:textSize="10sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-medium"
+                            android:text="@string/label_wealth_manager"
+                            android:textColor="@color/text_primary"
+                            android:textSize="24sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:fontFamily="sans-serif-medium"
-                        android:text="@string/format_zero"
-                        android:textColor="@color/text_primary"
-                        android:textSize="30sp" />
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:orientation="horizontal">
+
+                        <ImageButton
+                            android:id="@+id/btnSettings"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="@string/cd_settings"
+                            android:src="@android:drawable/ic_menu_preferences"
+                            app:tint="@color/text_tertiary" />
+
+                        <ImageButton
+                            android:id="@+id/btnReset"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="@string/cd_reset"
+                            android:src="@android:drawable/ic_menu_delete"
+                            app:tint="@color/text_tertiary" />
+                    </LinearLayout>
+                </RelativeLayout>
+
+                <!-- MONTH SELECTOR -->
+                <Spinner
+                    android:id="@+id/spinnerMonth"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="20dp"
+                    android:layout_marginTop="8dp"
+                    android:backgroundTint="@color/accent_purple" />
+
+                <!-- SWIPEABLE BALANCE CARD -->
+                <LinearLayout
+                    android:id="@+id/cardBalance"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_balance_card"
+                    android:orientation="vertical"
+                    android:padding="22dp">
+
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/textCardTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/label_total_expenses"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
+
+                            <TextView
+                                android:id="@+id/textTotalBalance"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:fontFamily="sans-serif-medium"
+                                android:text="@string/format_zero"
+                                android:textColor="@color/text_primary"
+                                android:textSize="30sp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/textSwipeHint"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentEnd="true"
+                            android:layout_alignParentBottom="true"
+                            android:letterSpacing="0.2"
+                            android:textColor="@color/accent_purple"
+                            android:textSize="10sp" />
+                    </RelativeLayout>
+
+                    <!-- Page indicator dots -->
+                    <LinearLayout
+                        android:id="@+id/dotIndicator"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:gravity="center"
+                        android:orientation="horizontal">
+
+                        <View
+                            android:id="@+id/dot0"
+                            android:layout_width="8dp"
+                            android:layout_height="8dp"
+                            android:layout_marginHorizontal="4dp"
+                            android:background="@drawable/bg_dot_active" />
+
+                        <View
+                            android:id="@+id/dot1"
+                            android:layout_width="6dp"
+                            android:layout_height="6dp"
+                            android:layout_marginHorizontal="4dp"
+                            android:background="@drawable/bg_dot_inactive" />
+
+                        <View
+                            android:id="@+id/dot2"
+                            android:layout_width="6dp"
+                            android:layout_height="6dp"
+                            android:layout_marginHorizontal="4dp"
+                            android:background="@drawable/bg_dot_inactive" />
+                    </LinearLayout>
                 </LinearLayout>
 
-                <!-- Swipe hint -->
+                <!-- PIE CHART -->
+                <com.github.mikephil.charting.charts.PieChart
+                    android:id="@+id/pieChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="220dp"
+                    android:layout_marginTop="4dp"
+                    android:contentDescription="@string/cd_pie_chart" />
+
+                <!-- ACTION BUTTONS ROW -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="4dp"
+                    android:orientation="horizontal"
+                    android:weightSum="3">
+
+                    <LinearLayout
+                        android:id="@+id/btnOpenPortfolio"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:background="@drawable/bg_portfolio_button"
+                        android:gravity="center"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-medium"
+                            android:text="@string/label_view_portfolio"
+                            android:textColor="@color/accent_purple"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/btnOpenBudgets"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:layout_marginHorizontal="4dp"
+                        android:background="@drawable/bg_portfolio_button"
+                        android:gravity="center"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-medium"
+                            android:text="@string/label_manage_budgets"
+                            android:textColor="@color/accent_purple"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/btnOpenAnalytics"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:background="@drawable/bg_portfolio_button"
+                        android:gravity="center"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-medium"
+                            android:text="@string/label_view_analytics"
+                            android:textColor="@color/accent_purple"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- RECENT TRANSACTIONS LABEL -->
                 <TextView
-                    android:id="@+id/textSwipeHint"
+                    android:id="@+id/labelRecent"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_alignParentEnd="true"
-                    android:layout_alignParentBottom="true"
-                    android:letterSpacing="0.2"
-                    android:textColor="@color/accent_purple"
-                    android:textSize="10sp" />
-            </RelativeLayout>
-
-            <!-- Page indicator dots -->
-            <LinearLayout
-                android:id="@+id/dotIndicator"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:gravity="center"
-                android:orientation="horizontal">
-
-                <View
-                    android:id="@+id/dot0"
-                    android:layout_width="8dp"
-                    android:layout_height="8dp"
-                    android:layout_marginHorizontal="4dp"
-                    android:background="@drawable/bg_dot_active" />
-
-                <View
-                    android:id="@+id/dot1"
-                    android:layout_width="6dp"
-                    android:layout_height="6dp"
-                    android:layout_marginHorizontal="4dp"
-                    android:background="@drawable/bg_dot_inactive" />
-
-                <View
-                    android:id="@+id/dot2"
-                    android:layout_width="6dp"
-                    android:layout_height="6dp"
-                    android:layout_marginHorizontal="4dp"
-                    android:background="@drawable/bg_dot_inactive" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- PIE CHART -->
-        <com.github.mikephil.charting.charts.PieChart
-            android:id="@+id/pieChart"
-            android:layout_width="match_parent"
-            android:layout_height="220dp"
-            android:layout_marginTop="4dp"
-            android:contentDescription="@string/cd_pie_chart" />
-
-        <!-- ACTION BUTTONS ROW -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="4dp"
-            android:orientation="horizontal"
-            android:weightSum="3">
-
-            <!-- VIEW PORTFOLIO -->
-            <LinearLayout
-                android:id="@+id/btnOpenPortfolio"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:layout_marginEnd="4dp"
-                android:background="@drawable/bg_portfolio_button"
-                android:gravity="center"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
+                    android:layout_marginStart="20dp"
+                    android:layout_marginTop="16dp"
                     android:fontFamily="sans-serif-medium"
-                    android:text="@string/label_view_portfolio"
-                    android:textColor="@color/accent_purple"
-                    android:textSize="11sp" />
-            </LinearLayout>
+                    android:text="@string/label_recent_transactions"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp" />
 
-            <!-- MANAGE BUDGETS -->
-            <LinearLayout
-                android:id="@+id/btnOpenBudgets"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:layout_marginHorizontal="4dp"
-                android:background="@drawable/bg_portfolio_button"
-                android:gravity="center"
-                android:orientation="horizontal">
+                <!-- SEARCH FIELD -->
+                <EditText
+                    android:id="@+id/inputSearch"
+                    style="@style/InputField"
+                    android:layout_marginHorizontal="16dp"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/label_search_transactions"
+                    android:importantForAutofill="no"
+                    android:inputType="text"
+                    android:maxLines="1" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
-                    android:text="@string/label_manage_budgets"
-                    android:textColor="@color/accent_purple"
-                    android:textSize="11sp" />
-            </LinearLayout>
-
-            <!-- VIEW ANALYTICS -->
-            <LinearLayout
-                android:id="@+id/btnOpenAnalytics"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_weight="1"
-                android:layout_marginStart="4dp"
-                android:background="@drawable/bg_portfolio_button"
-                android:gravity="center"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-medium"
-                    android:text="@string/label_view_analytics"
-                    android:textColor="@color/accent_purple"
-                    android:textSize="11sp" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- RECENT TRANSACTIONS LABEL -->
-        <TextView
-            android:id="@+id/labelRecent"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="20dp"
-            android:layout_marginTop="16dp"
-            android:fontFamily="sans-serif-medium"
-            android:text="@string/label_recent_transactions"
-            android:textColor="@color/text_primary"
-            android:textSize="15sp" />
-
-        <!-- SEARCH FIELD (filters the list client-side) -->
-        <EditText
-            android:id="@+id/inputSearch"
-            style="@style/InputField"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="8dp"
-            android:hint="@string/label_search_transactions"
-            android:importantForAutofill="no"
-            android:inputType="text"
-            android:maxLines="1" />
-
-        <!-- PULL-TO-REFRESH WRAPPER around the list + empty state. Having the
-             empty state inside the refresh layout means pulling still works
-             from the "no results" view (e.g. typo in search). -->
-        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-            android:id="@+id/swipeRefresh"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp">
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
+                <!-- TRANSACTIONS LIST — direct child of LinearLayout (no extra
+                     wrapper). nestedScrollingEnabled=false lets NestedScrollView
+                     handle all vertical scrolling; the RecyclerView renders all
+                     rows at once (wrap_content) instead of recycling. -->
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/recyclerView"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
                     android:clipToPadding="false"
                     android:nestedScrollingEnabled="false"
-                    android:paddingBottom="16dp" />
+                    android:paddingBottom="8dp" />
 
-                <!-- Empty-state CTA: shown only when the list is empty. -->
+                <!-- EMPTY STATE — shown only when the list has no items. Lives
+                     directly in the LinearLayout so its visibility never
+                     interferes with the RecyclerView measurement. -->
                 <LinearLayout
                     android:id="@+id/emptyState"
                     android:layout_width="match_parent"
@@ -331,15 +336,12 @@
                         android:textColor="@color/accent_purple"
                         android:textSize="12sp" />
                 </LinearLayout>
-            </FrameLayout>
-        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-    </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-    <!-- Quick-add manual transaction. Positioned bottom-right with enough
-         paddingBottom on the scroll content (above) so the FAB never occludes
-         the last transaction row. -->
+    <!-- FAB floats above everything -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabAddTransaction"
         android:layout_width="wrap_content"

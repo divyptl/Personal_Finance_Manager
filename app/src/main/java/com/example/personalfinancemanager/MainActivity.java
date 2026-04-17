@@ -616,7 +616,9 @@ public class MainActivity extends AppCompatActivity {
             // Delete first; LiveData will re-emit and the row disappears.
             transactionViewModel.deleteTransaction(removed.getId());
 
-            Snackbar sb = Snackbar.make(findViewById(R.id.swipeRefresh),
+            // Use the root view as the Snackbar anchor so it always appears
+            // above the FAB regardless of scroll position.
+            Snackbar sb = Snackbar.make(findViewById(android.R.id.content),
                     R.string.toast_transaction_deleted, Snackbar.LENGTH_LONG);
             sb.setAction(R.string.action_undo, v -> {
                 // Re-insert a fresh row. Room assigns a new primary key but
