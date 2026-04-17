@@ -27,6 +27,26 @@ public interface TransactionDao {
     @Query("DELETE FROM transaction_table")
     void deleteAllTransactions();
 
+    // --- Single-row edit / delete (manual transaction editor) ---
+    // Done as @Query instead of @Update so the Transaction entity can stay
+    // immutable (no public setters for amount/category/etc.). This also avoids
+    // needing to requery the row just to construct an @Update parameter.
+    @Query("UPDATE transaction_table SET message = :message, amount = :amount, " +
+           "timestamp = :timestamp, type = :type, category = :category WHERE id = :id")
+    void updateTransactionFields(int id, String message, double amount,
+                                 long timestamp, String type, String category);
+
+    @Query("DELETE FROM transaction_table WHERE id = :id")
+    void deleteTransactionById(int id);
+
+    /**
+     * Synchronous read of every transaction, newest first. Used by CSV export,
+     * which writes on a background thread and needs a plain {@code List<>}
+     * rather than LiveData.
+     */
+    @Query("SELECT * FROM transaction_table ORDER BY timestamp DESC")
+    List<Transaction> getAllTransactionsSync();
+
     // Fetch transactions between a specific start and end date
     @Query("SELECT * FROM transaction_table WHERE timestamp >= :startMillis AND timestamp <= :endMillis ORDER BY timestamp DESC")
     androidx.lifecycle.LiveData<java.util.List<Transaction>> getTransactionsByMonth(long startMillis, long endMillis);

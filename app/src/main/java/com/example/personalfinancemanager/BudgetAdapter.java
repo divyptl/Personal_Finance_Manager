@@ -1,6 +1,8 @@
 package com.example.personalfinancemanager;
 
 import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.LayerDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -72,8 +74,20 @@ public class BudgetAdapter extends RecyclerView.Adapter<BudgetAdapter.BudgetView
         } else {
             color = ContextCompat.getColor(holder.itemView.getContext(), R.color.accent_green);
         }
-        holder.progressBudget.getProgressDrawable()
-                .setColorFilter(color, PorterDuff.Mode.SRC_IN);
+        // Tint ONLY the progress layer — tinting the whole drawable would
+        // recolour the background track too, making the bar always look full.
+        Drawable pd = holder.progressBudget.getProgressDrawable();
+        if (pd instanceof LayerDrawable) {
+            Drawable progressLayer = ((LayerDrawable) pd)
+                    .findDrawableByLayerId(android.R.id.progress);
+            if (progressLayer != null) {
+                progressLayer.setColorFilter(color, PorterDuff.Mode.SRC_IN);
+            } else {
+                pd.setColorFilter(color, PorterDuff.Mode.SRC_IN);
+            }
+        } else if (pd != null) {
+            pd.setColorFilter(color, PorterDuff.Mode.SRC_IN);
+        }
 
         holder.itemView.setOnLongClickListener(v -> {
             if (longClickListener != null) {

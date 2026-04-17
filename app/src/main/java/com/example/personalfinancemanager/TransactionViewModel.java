@@ -41,4 +41,13 @@ public class TransactionViewModel extends AndroidViewModel {
     public androidx.lifecycle.LiveData<java.util.List<Transaction>> getTransactionsByMonth(long startMillis, long endMillis) {
         return mRepository.getTransactionsByMonth(startMillis, endMillis);
     }
+
+    public void updateTransaction(int id, String message, double amount,
+                                  long timestamp, String type, String category) {
+        mRepository.updateTransaction(id, message, amount, timestamp, type, category);
+    }
+
+    public void deleteTransaction(int id) {
+        mRepository.deleteTransaction(id);
+    }
 }

@@ -3,25 +3,39 @@ package com.example.personalfinancemanager;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.PopupMenu;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.biometric.BiometricManager;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.snackbar.Snackbar;
 
 import com.github.mikephil.charting.charts.PieChart;
 import com.github.mikephil.charting.components.Legend;
@@ -45,6 +59,10 @@ public class MainActivity extends AppCompatActivity {
 
     private TransactionViewModel transactionViewModel;
     private TransactionAdapter adapter;
+    private CredentialManager credentialManager;
+    private View emptyState;
+    private SwipeRefreshLayout swipeRefresh;
+    private ActivityResultLauncher<String> csvExportLauncher;
 
     private static final int CARD_EXPENSES    = 0;
     private static final int CARD_NET_AMOUNT  = 1;
@@ -69,6 +87,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        credentialManager = new CredentialManager(this);
+
         // Permission rationales — Play Store policy requires that we explain
         // BEFORE prompting why we need each permission. We use AlertDialogs
         // here as a lightweight pre-prompt; an in-app onboarding screen is
@@ -82,12 +102,51 @@ public class MainActivity extends AppCompatActivity {
         pieChart = findViewById(R.id.pieChart);
         spinnerMonth = findViewById(R.id.spinnerMonth);
         ImageButton btnReset = findViewById(R.id.btnReset);
+        ImageButton btnSettings = findViewById(R.id.btnSettings);
         View btnOpenPortfolio = findViewById(R.id.btnOpenPortfolio);
+        FloatingActionButton fabAddTransaction = findViewById(R.id.fabAddTransaction);
 
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new TransactionAdapter();
         recyclerView.setAdapter(adapter);
+
+        adapter.setOnLongClickListener(this::showTransactionOptions);
+
+        emptyState   = findViewById(R.id.emptyState);
+        swipeRefresh = findViewById(R.id.swipeRefresh);
+        EditText inputSearch = findViewById(R.id.inputSearch);
+        View btnAddFirstTransaction = findViewById(R.id.btnAddFirstTransaction);
+
+        // Search filter — client-side on whatever month is currently loaded.
+        inputSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                adapter.setSearchQuery(s == null ? "" : s.toString());
+                updateEmptyState();
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+
+        // Pull-to-refresh — the Room LiveData auto-updates anyway, so this is
+        // really a user-affordance for "did my latest SMS/manual entry land?".
+        // We just spin for a beat and dismiss; any actual new data will have
+        // already arrived via LiveData.
+        swipeRefresh.setColorSchemeResources(R.color.accent_purple,
+                R.color.accent_cyan, R.color.accent_green);
+        swipeRefresh.setOnRefreshListener(() ->
+                swipeRefresh.postDelayed(() -> swipeRefresh.setRefreshing(false), 600));
+
+        btnAddFirstTransaction.setOnClickListener(v -> showAddTransactionDialog());
+
+        // Swipe-to-delete with Undo.
+        new ItemTouchHelper(new SwipeToDeleteCallback()).attachToRecyclerView(recyclerView);
+
+        // ACTION_CREATE_DOCUMENT — SAF handles the file-picker + write permission.
+        // MIME "text/csv" filters the picker to sensible save locations.
+        csvExportLauncher = registerForActivityResult(
+                new ActivityResultContracts.CreateDocument("text/csv"),
+                this::handleCsvExportResult);
 
         setupPieChart();
 
@@ -125,6 +184,13 @@ public class MainActivity extends AppCompatActivity {
         View btnOpenAnalytics = findViewById(R.id.btnOpenAnalytics);
         btnOpenAnalytics.setOnClickListener(v ->
                 startActivity(new Intent(this, AnalyticsActivity.class)));
+
+        btnSettings.setOnClickListener(this::showSettingsMenu);
+        fabAddTransaction.setOnClickListener(v -> showAddTransactionDialog());
+
+        // One-time nudge: the first time the dashboard loads, offer app lock.
+        // We only prompt once — if the user declines we stay out of their way.
+        maybePromptForAppLock();
     }
 
     private void setupMonthSpinner() {
@@ -168,6 +234,7 @@ public class MainActivity extends AppCompatActivity {
                         MainActivity.this, transactions -> {
                             adapter.setTransactions(transactions);
                             calculateDashboard(transactions);
+                            updateEmptyState();
                         });
             }
 
@@ -396,5 +463,246 @@ public class MainActivity extends AppCompatActivity {
         // Currently we don't need to react — the receiver/notifications simply
         // start working once the user grants permission. Hook here to surface
         // a Snackbar if you want to confirm.
+    }
+
+    // ==================== APP LOCK ====================
+
+    /**
+     * First-run only: offer to enable app lock. We gate this on "have we asked
+     * before?" — a dismissed prompt must not come back on every launch, or it
+     * turns into spam.
+     */
+    private void maybePromptForAppLock() {
+        if (credentialManager.hasBeenPromptedForAppLock()) return;
+        if (credentialManager.isBiometricLockEnabled()) return;
+        if (!canDeviceAuthenticate()) {
+            // No sensor and no device PIN — don't promise a feature we can't deliver.
+            credentialManager.markAppLockPrompted();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_enable_lock_title)
+                .setMessage(R.string.dialog_enable_lock_message)
+                .setPositiveButton(R.string.action_enable_lock, (d, w) -> {
+                    credentialManager.setBiometricLockEnabled(true);
+                    credentialManager.markAppLockPrompted();
+                    Toast.makeText(this, R.string.toast_lock_enabled, Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(R.string.action_later, (d, w) ->
+                        credentialManager.markAppLockPrompted())
+                .setCancelable(false)
+                .show();
+    }
+
+    private boolean canDeviceAuthenticate() {
+        int auths = BiometricManager.Authenticators.BIOMETRIC_WEAK
+                | BiometricManager.Authenticators.DEVICE_CREDENTIAL;
+        return BiometricManager.from(this).canAuthenticate(auths)
+                == BiometricManager.BIOMETRIC_SUCCESS;
+    }
+
+    private void showSettingsMenu(View anchor) {
+        PopupMenu popup = new PopupMenu(this, anchor);
+        int idToggleLock = 1;
+        int idExportCsv  = 2;
+        String lockLabel = getString(R.string.label_app_lock) + ": "
+                + (credentialManager.isBiometricLockEnabled() ? "ON" : "OFF");
+        popup.getMenu().add(0, idToggleLock, 0, lockLabel);
+        popup.getMenu().add(0, idExportCsv, 1, R.string.menu_export_csv);
+        popup.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == idToggleLock) { toggleAppLock(); return true; }
+            if (item.getItemId() == idExportCsv)  { startCsvExport(); return true; }
+            return false;
+        });
+        popup.show();
+    }
+
+    private void toggleAppLock() {
+        boolean enabled = credentialManager.isBiometricLockEnabled();
+        if (enabled) {
+            credentialManager.setBiometricLockEnabled(false);
+            Toast.makeText(this, R.string.toast_lock_disabled, Toast.LENGTH_SHORT).show();
+        } else {
+            if (!canDeviceAuthenticate()) {
+                Toast.makeText(this, R.string.toast_lock_unavailable, Toast.LENGTH_LONG).show();
+                return;
+            }
+            credentialManager.setBiometricLockEnabled(true);
+            Toast.makeText(this, R.string.toast_lock_enabled, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    // ==================== QUICK ADD / EDIT TRANSACTION ====================
+
+    private void showAddTransactionDialog() {
+        TransactionEditorDialog.show(this, null, (id, message, amount, timestamp, type, category) -> {
+            Transaction txn = new Transaction(message, amount, timestamp, type, category);
+            transactionViewModel.insert(txn);
+            Toast.makeText(this, R.string.toast_transaction_added, Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void showTransactionOptions(Transaction transaction) {
+        // Two-step: long-press → "Edit or Delete?" → action. Avoids accidental
+        // destructive taps and keeps the dialog surface small.
+        CharSequence[] options = {
+                getString(R.string.action_edit),
+                getString(R.string.action_delete)
+        };
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.action_transaction_options)
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        showEditTransactionDialog(transaction);
+                    } else {
+                        confirmDeleteTransaction(transaction);
+                    }
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
+    }
+
+    private void showEditTransactionDialog(Transaction transaction) {
+        TransactionEditorDialog.show(this, transaction,
+                (id, message, amount, timestamp, type, category) -> {
+                    if (id == null) return; // defensive — should never happen in edit mode
+                    transactionViewModel.updateTransaction(id, message, amount,
+                            timestamp, type, category);
+                    Toast.makeText(this, R.string.toast_transaction_updated,
+                            Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void confirmDeleteTransaction(Transaction transaction) {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_delete_transaction_title)
+                .setMessage(R.string.dialog_delete_transaction_message)
+                .setPositiveButton(R.string.action_delete, (d, w) -> {
+                    transactionViewModel.deleteTransaction(transaction.getId());
+                    Toast.makeText(this, R.string.toast_transaction_deleted,
+                            Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
+    }
+
+    // ==================== SWIPE TO DELETE ====================
+
+    /**
+     * Swipe-left-or-right on a transaction row deletes it immediately but
+     * stashes the row for a few seconds so the user can hit UNDO. Matches
+     * Gmail / GPay UX — feels lightweight but never silently loses data.
+     */
+    private final class SwipeToDeleteCallback extends ItemTouchHelper.SimpleCallback {
+        SwipeToDeleteCallback() {
+            super(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT);
+        }
+
+        @Override
+        public boolean onMove(@NonNull RecyclerView rv,
+                              @NonNull RecyclerView.ViewHolder vh,
+                              @NonNull RecyclerView.ViewHolder target) {
+            return false; // we don't support reorder
+        }
+
+        @Override
+        public void onSwiped(@NonNull RecyclerView.ViewHolder vh, int direction) {
+            int pos = vh.getBindingAdapterPosition();
+            Transaction removed = adapter.getTransactionAt(pos);
+            if (removed == null) return;
+
+            // Delete first; LiveData will re-emit and the row disappears.
+            transactionViewModel.deleteTransaction(removed.getId());
+
+            Snackbar sb = Snackbar.make(findViewById(R.id.swipeRefresh),
+                    R.string.toast_transaction_deleted, Snackbar.LENGTH_LONG);
+            sb.setAction(R.string.action_undo, v -> {
+                // Re-insert a fresh row. Room assigns a new primary key but
+                // the list order (timestamp DESC) means the row reappears in
+                // the same visible position.
+                Transaction restored = new Transaction(
+                        removed.getMessage(), removed.getAmount(),
+                        removed.getTimestamp(), removed.getType(),
+                        removed.getCategory());
+                transactionViewModel.insert(restored);
+                Toast.makeText(MainActivity.this,
+                        R.string.toast_transaction_restored, Toast.LENGTH_SHORT).show();
+            });
+            sb.show();
+        }
+    }
+
+    // ==================== EMPTY STATE ====================
+
+    private void updateEmptyState() {
+        if (emptyState == null) return;
+        boolean empty = adapter.getItemCount() == 0;
+        emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
+    }
+
+    // ==================== CSV EXPORT ====================
+
+    private void startCsvExport() {
+        SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT);
+        String suggested = getString(R.string.csv_default_filename,
+                fmt.format(new java.util.Date()));
+        try {
+            csvExportLauncher.launch(suggested);
+        } catch (Exception e) {
+            Toast.makeText(this,
+                    getString(R.string.toast_csv_failed, e.getMessage()),
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void handleCsvExportResult(Uri uri) {
+        if (uri == null) return; // user backed out of the picker
+        // Query and write off the main thread — CSV export can be large enough
+        // to ANR if the user has years of SMS-captured rows.
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            try {
+                List<Transaction> rows = AppDatabase.getDatabase(this)
+                        .transactionDao().getAllTransactionsSync();
+                if (rows == null || rows.isEmpty()) {
+                    runOnUiThread(() -> Toast.makeText(this,
+                            R.string.toast_csv_empty, Toast.LENGTH_SHORT).show());
+                    return;
+                }
+                int count = TransactionCsvExporter.export(this, uri, rows);
+                runOnUiThread(() -> Toast.makeText(this,
+                        getString(R.string.toast_csv_saved) + " (" + count + ")",
+                        Toast.LENGTH_LONG).show());
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(this,
+                        getString(R.string.toast_csv_failed, e.getMessage()),
+                        Toast.LENGTH_LONG).show());
+            }
+        });
+    }
+
+    // ==================== AUTO-LOCK GRACE PERIOD ====================
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Re-prompt if the app was backgrounded long enough to have expired
+        // the grace window. Delegate to LockActivity so its existing auth
+        // flow handles BiometricPrompt, device credential, and cancel paths.
+        if (credentialManager != null
+                && credentialManager.isBiometricLockEnabled()
+                && !LockActivity.isWithinGracePeriod()) {
+            Intent relock = new Intent(this, LockActivity.class);
+            relock.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(relock);
+            overridePendingTransition(0, 0);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Don't clear the grace timestamp here — that's what the grace period
+        // is *for*. The timestamp naturally ages out via isWithinGracePeriod().
     }
 }

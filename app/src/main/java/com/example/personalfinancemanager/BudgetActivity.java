@@ -26,14 +26,20 @@ import java.util.Map;
  */
 public class BudgetActivity extends AppCompatActivity {
 
-    /** Pre-defined expense categories matching those produced by SmsTransactionParser. */
+    /**
+     * Pre-defined expense categories. These MUST match the exact category strings
+     * produced by {@link SmsTransactionParser#categorize(String)} — otherwise
+     * budgets won't match incoming transactions and spending will show as ₹0.
+     */
     private static final String[] CATEGORIES = {
-            "Food", "Shopping", "Travel", "Entertainment", "Bills",
-            "Groceries", "Health", "Education", "Transfer", "Other"
+            "Food & Dining", "Transport", "Shopping", "Groceries",
+            "Bills & Utilities", "Health", "Entertainment", "Education",
+            "Rent & Housing", "Investments", "Transfer", "Other"
     };
 
     private BudgetAdapter adapter;
     private View emptyState;
+    private List<Budget> currentBudgets;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,17 +66,29 @@ public class BudgetActivity extends AppCompatActivity {
                         .setNegativeButton(R.string.action_cancel, null)
                         .show());
 
-        // Observe budgets and spending
+        // Observe budgets and spending. We hold the latest budget list in a
+        // local ref so the transaction observer (below) can recompute spending
+        // without re-querying Budget rows.
         AppDatabase db = AppDatabase.getDatabase(this);
         db.budgetDao().getAllBudgets().observe(this, budgets -> {
+            currentBudgets = budgets;
             adapter.setBudgets(budgets);
             boolean empty = budgets == null || budgets.isEmpty();
             emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
             recycler.setVisibility(empty ? View.GONE : View.VISIBLE);
 
-            // Load current spending for each budget category
             if (budgets != null && !budgets.isEmpty()) {
                 loadSpending(budgets);
+            }
+        });
+
+        // Also refresh spending whenever transactions change — otherwise the
+        // "Spent" values freeze at the value they had when the activity opened
+        // and new SMS-captured expenses won't appear until the user navigates
+        // away and back.
+        db.transactionDao().getAllTransactions().observe(this, txns -> {
+            if (currentBudgets != null && !currentBudgets.isEmpty()) {
+                loadSpending(currentBudgets);
             }
         });
 

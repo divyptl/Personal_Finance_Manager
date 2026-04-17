@@ -160,6 +160,54 @@
     <string name="label_income">Income</string>
     <string name="label_expenses">Expenses</string>
 
+    <!-- Swipe / Undo / Search / Export / Empty-state -->
+    <string name="action_undo">UNDO</string>
+    <string name="toast_transaction_restored">Transaction restored</string>
+    <string name="label_search_transactions">Search transactions</string>
+    <string name="label_add_first_transaction">Add your first transaction</string>
+    <string name="menu_export_csv">Export to CSV</string>
+    <string name="csv_subject">WealthFlow transactions export</string>
+    <string name="csv_chooser">Save transactions</string>
+    <string name="csv_default_filename">wealthflow-transactions-%1$s.csv</string>
+    <string name="toast_csv_saved">Transactions exported</string>
+    <string name="toast_csv_failed">Export failed: %1$s</string>
+    <string name="toast_csv_empty">No transactions to export</string>
+
+    <!-- App Lock -->
+    <string name="lock_title">Unlock WealthFlow</string>
+    <string name="lock_subtitle">Use fingerprint, face, or device PIN to continue.</string>
+    <string name="lock_retry">Try again</string>
+    <string name="dialog_enable_lock_title">Protect your finances</string>
+    <string name="dialog_enable_lock_message">Your balance, transactions, and broker tokens are sensitive. Enable app lock to require fingerprint or device PIN each time you open WealthFlow.</string>
+    <string name="action_enable_lock">Enable lock</string>
+    <string name="action_later">Not now</string>
+    <string name="toast_lock_enabled">App lock enabled</string>
+    <string name="toast_lock_disabled">App lock disabled</string>
+    <string name="toast_lock_unavailable">No biometric or device PIN set up on this device</string>
+    <string name="label_app_lock">App Lock</string>
+    <string name="label_app_lock_on">Require biometric / PIN on launch</string>
+
+    <!-- Quick Add Transaction -->
+    <string name="cd_add_transaction">Add transaction</string>
+    <string name="dialog_add_transaction_title">Add Transaction</string>
+    <string name="dialog_edit_transaction_title">Edit Transaction</string>
+    <string name="label_amount">Amount (\u20B9)</string>
+    <string name="label_note">Note (optional)</string>
+    <string name="label_date">Date</string>
+    <string name="label_category">Category</string>
+    <string name="label_type">Type</string>
+    <string name="type_expense">Expense</string>
+    <string name="type_income">Income</string>
+    <string name="action_save">Save</string>
+    <string name="action_edit">Edit</string>
+    <string name="toast_transaction_added">Transaction added</string>
+    <string name="toast_transaction_updated">Transaction updated</string>
+    <string name="toast_transaction_deleted">Transaction deleted</string>
+    <string name="error_amount_required">Enter a valid amount greater than zero</string>
+    <string name="dialog_delete_transaction_title">Delete transaction?</string>
+    <string name="dialog_delete_transaction_message">This will permanently remove this transaction from your history.</string>
+    <string name="action_transaction_options">Transaction options</string>
+
     <!-- Accessibility (content descriptions) -->
     <string name="cd_reset">Clear all transactions</string>
     <string name="cd_back">Back</string>

@@ -41,6 +41,13 @@ public class CredentialManager {
     private static final String KEY_UPSTOX_TOKEN     = "upstox_access_token";
     private static final String KEY_UPSTOX_TIMESTAMP = "upstox_token_timestamp";
 
+    // App-lock settings. We persist the *user choice* separately from whether
+    // the hardware supports it — so the user's explicit opt-in survives device
+    // changes and we don't silently disable the lock if a fingerprint sensor
+    // temporarily reports as unavailable.
+    private static final String KEY_BIOMETRIC_LOCK_ENABLED = "biometric_lock_enabled";
+    private static final String KEY_APP_LOCK_PROMPTED      = "app_lock_prompted";
+
     private final SharedPreferences prefs;
     private final boolean encrypted;
 
@@ -142,6 +149,25 @@ public class CredentialManager {
                 .remove(KEY_UPSTOX_TOKEN)
                 .remove(KEY_UPSTOX_TIMESTAMP)
                 .apply();
+    }
+
+    // --- App-lock preferences ---
+
+    public boolean isBiometricLockEnabled() {
+        return prefs.getBoolean(KEY_BIOMETRIC_LOCK_ENABLED, false);
+    }
+
+    public void setBiometricLockEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_BIOMETRIC_LOCK_ENABLED, enabled).apply();
+    }
+
+    /** Whether we've already asked the user once about enabling the lock. */
+    public boolean hasBeenPromptedForAppLock() {
+        return prefs.getBoolean(KEY_APP_LOCK_PROMPTED, false);
+    }
+
+    public void markAppLockPrompted() {
+        prefs.edit().putBoolean(KEY_APP_LOCK_PROMPTED, true).apply();
     }
 
     /** Wipes everything (used by Logout and "Delete Account Data"). */

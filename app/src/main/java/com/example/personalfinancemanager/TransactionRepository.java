@@ -41,4 +41,14 @@ public class TransactionRepository {
         return mTransactionDao.getTransactionsByMonth(startMillis, endMillis);
     }
 
+    public void updateTransaction(int id, String message, double amount,
+                                  long timestamp, String type, String category) {
+        AppDatabase.databaseWriteExecutor.execute(() ->
+                mTransactionDao.updateTransactionFields(id, message, amount, timestamp, type, category));
+    }
+
+    public void deleteTransaction(int id) {
+        AppDatabase.databaseWriteExecutor.execute(() ->
+                mTransactionDao.deleteTransactionById(id));
+    }
 }

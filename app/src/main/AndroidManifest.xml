@@ -57,14 +57,26 @@
             android:name=".UpstoxLoginActivity"
             android:exported="false" />
 
+        <!--
+            LockActivity is the launcher. It checks whether the user has
+            opted into biometric app lock; if not (or if the hardware can't
+            satisfy the request) it transparently forwards to MainActivity.
+            Keeping the lock out of MainActivity.onCreate() means orientation
+            changes / process death don't re-trigger the prompt.
+        -->
         <activity
-            android:name=".MainActivity"
-            android:exported="true">
+            android:name=".LockActivity"
+            android:exported="true"
+            android:theme="@style/Theme.PersonalFinanceManager">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="false" />
 
         <!--
             SmsReceiver MUST be exported=true so the system (which is "external"

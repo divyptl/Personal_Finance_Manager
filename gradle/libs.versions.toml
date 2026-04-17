@@ -8,6 +8,8 @@ material = "1.10.0"
 activity = "1.8.0"
 constraintlayout = "2.1.4"
 securityCrypto = "1.1.0-alpha06"
+biometric = "1.1.0"
+swipeRefresh = "1.1.0"
 lifecycle = "2.7.0"
 mockitoCore = "5.7.0"
 robolectric = "4.11.1"
@@ -23,6 +25,8 @@ material = { group = "com.google.android.material", name = "material", version.r
 activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
+swiperefreshlayout = { group = "androidx.swiperefreshlayout", name = "swiperefreshlayout", version.ref = "swipeRefresh" }
 lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "lifecycle" }
 lifecycle-livedata = { group = "androidx.lifecycle", name = "lifecycle-livedata", version.ref = "lifecycle" }
 mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockitoCore" }
