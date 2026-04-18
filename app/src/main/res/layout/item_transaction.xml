@@ -71,8 +71,11 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:background="@drawable/bg_chip"
-                android:paddingHorizontal="8dp"
-                android:paddingVertical="2dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="@string/dialog_pick_category_title"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
                 android:text="Category"
                 android:textColor="@color/accent_purple"
                 android:textSize="9sp" />

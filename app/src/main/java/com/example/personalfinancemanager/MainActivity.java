@@ -87,6 +87,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        applyDashboardOrder();
+
         credentialManager = new CredentialManager(this);
 
         // Permission rationales — Play Store policy requires that we explain
@@ -112,6 +114,7 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setAdapter(adapter);
 
         adapter.setOnLongClickListener(this::showTransactionOptions);
+        adapter.setOnCategoryClickListener(this::showCategoryPicker);
 
         emptyState   = findViewById(R.id.emptyState);
         swipeRefresh = findViewById(R.id.swipeRefresh);
@@ -166,13 +169,7 @@ public class MainActivity extends AppCompatActivity {
         setupMonthSpinner();
         setupSwipeListener();
 
-        btnReset.setOnClickListener(v -> new AlertDialog.Builder(this)
-                .setTitle(R.string.dialog_clear_title)
-                .setMessage(R.string.dialog_clear_message)
-                .setPositiveButton(R.string.action_delete, (dialog, which) ->
-                        transactionViewModel.deleteAllTransactions())
-                .setNegativeButton(R.string.action_cancel, null)
-                .show());
+        btnReset.setOnClickListener(v -> confirmDeleteAllTransactions());
 
         btnOpenPortfolio.setOnClickListener(v ->
                 startActivity(new Intent(this, PortfolioActivity.class)));
@@ -188,9 +185,27 @@ public class MainActivity extends AppCompatActivity {
         btnSettings.setOnClickListener(this::showSettingsMenu);
         fabAddTransaction.setOnClickListener(v -> showAddTransactionDialog());
 
+        // Month navigator arrows. Spinner index 0 = current month, higher = older.
+        // "Next" = newer = smaller index; "Prev" = older = larger index.
+        ImageButton btnPrevMonth = findViewById(R.id.btnPrevMonth);
+        ImageButton btnNextMonth = findViewById(R.id.btnNextMonth);
+        btnPrevMonth.setOnClickListener(v -> {
+            int pos = spinnerMonth.getSelectedItemPosition();
+            if (pos < spinnerMonth.getCount() - 1) spinnerMonth.setSelection(pos + 1);
+        });
+        btnNextMonth.setOnClickListener(v -> {
+            int pos = spinnerMonth.getSelectedItemPosition();
+            if (pos > 0) spinnerMonth.setSelection(pos - 1);
+        });
+
         // One-time nudge: the first time the dashboard loads, offer app lock.
         // We only prompt once — if the user declines we stay out of their way.
         maybePromptForAppLock();
+
+        // Best-effort net-worth snapshot for the Analytics trend chart.
+        // Throttled internally to at most once per 6 hours so dashboard
+        // churn doesn't pollute the history.
+        NetWorthTracker.maybeSnapshot(this);
     }
 
     private void setupMonthSpinner() {
@@ -328,6 +343,20 @@ public class MainActivity extends AppCompatActivity {
                 break;
         }
         updateDots();
+        announceBalanceCardState();
+    }
+
+    /**
+     * TalkBack announcement after a swipe so non-sighted users hear the new
+     * state. The static contentDescription on the card is not enough because
+     * Android doesn't re-announce an unchanged description.
+     */
+    private void announceBalanceCardState() {
+        View card = findViewById(R.id.cardBalance);
+        if (card == null) return;
+        String title = textCardTitle != null ? textCardTitle.getText().toString() : "";
+        String value = textTotalBalance != null ? textTotalBalance.getText().toString() : "";
+        card.announceForAccessibility(title + ": " + value);
     }
 
     private void updateDots() {
@@ -505,18 +534,95 @@ public class MainActivity extends AppCompatActivity {
 
     private void showSettingsMenu(View anchor) {
         PopupMenu popup = new PopupMenu(this, anchor);
-        int idToggleLock = 1;
-        int idExportCsv  = 2;
+        int idToggleLock    = 1;
+        int idExportCsv     = 2;
+        int idSubscriptions = 3;
+        int idPriceAlerts   = 4;
+        int idTheme         = 5;
+        int idReorder       = 6;
         String lockLabel = getString(R.string.label_app_lock) + ": "
                 + (credentialManager.isBiometricLockEnabled() ? "ON" : "OFF");
         popup.getMenu().add(0, idToggleLock, 0, lockLabel);
-        popup.getMenu().add(0, idExportCsv, 1, R.string.menu_export_csv);
+        popup.getMenu().add(0, idSubscriptions, 1, R.string.menu_subscriptions);
+        popup.getMenu().add(0, idPriceAlerts, 2, R.string.menu_price_alerts);
+        popup.getMenu().add(0, idTheme, 3,
+                getString(R.string.menu_theme, themeLabel(credentialManager.getThemeMode())));
+        popup.getMenu().add(0, idReorder, 4, R.string.menu_reorder_cards);
+        popup.getMenu().add(0, idExportCsv, 5, R.string.menu_export_csv);
         popup.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == idToggleLock) { toggleAppLock(); return true; }
-            if (item.getItemId() == idExportCsv)  { startCsvExport(); return true; }
+            if (item.getItemId() == idToggleLock)    { toggleAppLock(); return true; }
+            if (item.getItemId() == idSubscriptions) {
+                startActivity(new Intent(this, SubscriptionActivity.class));
+                return true;
+            }
+            if (item.getItemId() == idPriceAlerts) {
+                startActivity(new Intent(this, PriceAlertActivity.class));
+                return true;
+            }
+            if (item.getItemId() == idTheme)         { showThemePicker(); return true; }
+            if (item.getItemId() == idReorder) {
+                startActivity(new Intent(this, DashboardOrderActivity.class));
+                return true;
+            }
+            if (item.getItemId() == idExportCsv)     { startCsvExport(); return true; }
             return false;
         });
         popup.show();
+    }
+
+    /**
+     * Re-orders the four dashboard cards in their shared LinearLayout parent
+     * according to the saved preference. Called once in onCreate — the user
+     * has to re-enter MainActivity for a change to take effect, which is
+     * fine because {@link DashboardOrderActivity} is modal-ish and we
+     * always finish back to here.
+     */
+    private void applyDashboardOrder() {
+        View balance      = findViewById(R.id.cardBalance);
+        View pie          = findViewById(R.id.pieChart);
+        View actions      = findViewById(R.id.sectionActions);
+        View transactions = findViewById(R.id.sectionTransactions);
+        if (balance == null || !(balance.getParent() instanceof android.view.ViewGroup)) return;
+        android.view.ViewGroup parent = (android.view.ViewGroup) balance.getParent();
+        DashboardOrderController.applyOrder(
+                this, parent, balance, pie, actions, transactions);
+    }
+
+    /**
+     * Single-choice picker for System / Light / Dark. Persists the choice
+     * and calls through to {@link ThemeController} so the entire task
+     * recreates against the new palette.
+     */
+    private void showThemePicker() {
+        final String[] tokens = {
+                CredentialManager.THEME_SYSTEM,
+                CredentialManager.THEME_LIGHT,
+                CredentialManager.THEME_DARK };
+        String[] labels = {
+                getString(R.string.theme_system),
+                getString(R.string.theme_light),
+                getString(R.string.theme_dark) };
+        int selected = 0;
+        String current = credentialManager.getThemeMode();
+        for (int i = 0; i < tokens.length; i++) {
+            if (tokens[i].equals(current)) { selected = i; break; }
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_theme_title)
+                .setSingleChoiceItems(labels, selected, (d, which) -> {
+                    String pick = tokens[which];
+                    credentialManager.setThemeMode(pick);
+                    ThemeController.applyMode(pick);
+                    d.dismiss();
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
+    }
+
+    private String themeLabel(String mode) {
+        if (CredentialManager.THEME_LIGHT.equals(mode)) return getString(R.string.theme_light);
+        if (CredentialManager.THEME_DARK.equals(mode))  return getString(R.string.theme_dark);
+        return getString(R.string.theme_system);
     }
 
     private void toggleAppLock() {
@@ -573,6 +679,46 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(this, R.string.toast_transaction_updated,
                             Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    /**
+     * Inline category reassignment. Keeps every other field of the transaction
+     * intact — only the category changes. Fired by {@link TransactionAdapter}
+     * when the user taps the category chip on a row.
+     */
+    private void showCategoryPicker(Transaction transaction) {
+        if (transaction == null) return;
+        final String[] options = TransactionEditorDialog.CATEGORIES;
+        int currentIdx = -1;
+        if (transaction.getCategory() != null) {
+            for (int i = 0; i < options.length; i++) {
+                if (options[i].equalsIgnoreCase(transaction.getCategory())) {
+                    currentIdx = i;
+                    break;
+                }
+            }
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_pick_category_title)
+                .setSingleChoiceItems(options, currentIdx, (dialog, which) -> {
+                    String newCategory = options[which];
+                    if (newCategory.equals(transaction.getCategory())) {
+                        dialog.dismiss();
+                        return;
+                    }
+                    transactionViewModel.updateTransaction(
+                            transaction.getId(),
+                            transaction.getMessage(),
+                            transaction.getAmount(),
+                            transaction.getTimestamp(),
+                            transaction.getType(),
+                            newCategory);
+                    Toast.makeText(this, R.string.toast_category_updated,
+                            Toast.LENGTH_SHORT).show();
+                    dialog.dismiss();
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
     }
 
     private void confirmDeleteTransaction(Transaction transaction) {
@@ -681,6 +827,53 @@ public class MainActivity extends AppCompatActivity {
                         getString(R.string.toast_csv_failed, e.getMessage()),
                         Toast.LENGTH_LONG).show());
             }
+        });
+    }
+
+    // ==================== DELETE ALL (with re-auth + undo) ====================
+
+    /**
+     * Delete-all is the single most destructive action in the app. We gate it
+     * behind:
+     *   1) Biometric / device-credential re-auth when app lock is on.
+     *   2) A confirm dialog.
+     *   3) An Undo Snackbar that restores a full snapshot.
+     */
+    private void confirmDeleteAllTransactions() {
+        BiometricGate.OnAuthenticated proceed = () -> new AlertDialog.Builder(this)
+                .setTitle(R.string.dialog_clear_title)
+                .setMessage(R.string.dialog_clear_message)
+                .setPositiveButton(R.string.action_delete, (d, w) -> performDeleteAllWithUndo())
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
+
+        if (credentialManager != null && credentialManager.isBiometricLockEnabled()) {
+            BiometricGate.require(this, getString(R.string.reauth_title),
+                    getString(R.string.reauth_subtitle), proceed);
+        } else {
+            proceed.run();
+        }
+    }
+
+    private void performDeleteAllWithUndo() {
+        // Snapshot off the UI thread so we can offer true Undo even after the
+        // DELETE has run.
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            final List<Transaction> snapshot = AppDatabase.getDatabase(this)
+                    .transactionDao().getAllTransactionsSync();
+            transactionViewModel.deleteAllTransactions();
+            runOnUiThread(() -> {
+                Snackbar sb = Snackbar.make(findViewById(android.R.id.content),
+                        R.string.toast_all_deleted, Snackbar.LENGTH_LONG);
+                if (snapshot != null && !snapshot.isEmpty()) {
+                    sb.setAction(R.string.action_undo, v -> {
+                        transactionViewModel.restoreAll(snapshot);
+                        Toast.makeText(MainActivity.this,
+                                R.string.toast_all_restored, Toast.LENGTH_SHORT).show();
+                    });
+                }
+                sb.show();
+            });
         });
     }
 

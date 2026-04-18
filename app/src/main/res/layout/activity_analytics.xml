@@ -37,12 +37,43 @@
                 android:textSize="18sp" />
         </RelativeLayout>
 
+        <!-- NET WORTH TREND (Line Chart) -->
+        <TextView
+            android:id="@+id/labelNetWorthTrend"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_marginTop="8dp"
+            android:fontFamily="sans-serif-medium"
+            android:text="@string/label_net_worth_trend"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp" />
+
+        <com.github.mikephil.charting.charts.LineChart
+            android:id="@+id/netWorthChart"
+            android:layout_width="match_parent"
+            android:layout_height="220dp"
+            android:layout_marginHorizontal="8dp"
+            android:layout_marginTop="8dp"
+            android:contentDescription="@string/cd_net_worth_chart" />
+
+        <TextView
+            android:id="@+id/netWorthHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="4dp"
+            android:text="@string/label_net_worth_hint"
+            android:textColor="@color/text_tertiary"
+            android:textSize="11sp"
+            android:visibility="gone" />
+
         <!-- MONTHLY EXPENSE TREND (Line Chart) -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="20dp"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="20dp"
             android:fontFamily="sans-serif-medium"
             android:text="@string/label_monthly_trend"
             android:textColor="@color/text_primary"

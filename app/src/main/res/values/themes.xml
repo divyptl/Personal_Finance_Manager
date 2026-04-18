@@ -12,7 +12,8 @@
         <item name="android:windowBackground">@color/bg_dark</item>
         <item name="android:statusBarColor">@color/status_bar</item>
         <item name="android:navigationBarColor">@color/bg_dark</item>
-        <item name="android:windowLightStatusBar">false</item>
+        <!-- In day mode the status bar background is light, so icons need to be dark. -->
+        <item name="android:windowLightStatusBar">true</item>
         <item name="bottomSheetDialogTheme">@style/BottomSheetTheme</item>
 
         <!-- Dialog theme -->

@@ -47,6 +47,13 @@ public class CredentialManager {
     // temporarily reports as unavailable.
     private static final String KEY_BIOMETRIC_LOCK_ENABLED = "biometric_lock_enabled";
     private static final String KEY_APP_LOCK_PROMPTED      = "app_lock_prompted";
+    private static final String KEY_ONBOARDING_COMPLETED   = "onboarding_completed";
+    private static final String KEY_THEME_MODE             = "theme_mode";
+
+    /** Theme-mode tokens persisted in prefs; mapped to AppCompatDelegate.MODE_* at read time. */
+    public static final String THEME_SYSTEM = "system";
+    public static final String THEME_LIGHT  = "light";
+    public static final String THEME_DARK   = "dark";
 
     private final SharedPreferences prefs;
     private final boolean encrypted;
@@ -168,6 +175,27 @@ public class CredentialManager {
 
     public void markAppLockPrompted() {
         prefs.edit().putBoolean(KEY_APP_LOCK_PROMPTED, true).apply();
+    }
+
+    /** Whether the first-run onboarding carousel has been seen / dismissed. */
+    public boolean isOnboardingCompleted() {
+        return prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false);
+    }
+
+    public void markOnboardingCompleted() {
+        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, true).apply();
+    }
+
+    /** Persisted theme preference. Default: follow system. */
+    public String getThemeMode() {
+        return prefs.getString(KEY_THEME_MODE, THEME_SYSTEM);
+    }
+
+    public void setThemeMode(String mode) {
+        if (!THEME_SYSTEM.equals(mode) && !THEME_LIGHT.equals(mode) && !THEME_DARK.equals(mode)) {
+            mode = THEME_SYSTEM;
+        }
+        prefs.edit().putString(KEY_THEME_MODE, mode).apply();
     }
 
     /** Wipes everything (used by Logout and "Delete Account Data"). */

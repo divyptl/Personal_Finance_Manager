@@ -19,4 +19,8 @@ public interface StockDao {
     /** Used by the "Delete all data" account-deletion flow. */
     @Query("DELETE FROM stock_table")
     void deleteAll();
+
+    /** Synchronous read for the net-worth snapshot tracker (background thread). */
+    @Query("SELECT * FROM stock_table")
+    List<Stock> getAllStocksSync();
 }

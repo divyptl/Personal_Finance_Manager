@@ -1,32 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Day (light) palette. Names mirror the dark palette in values-night/ so
+  every layout that references @color/bg_dark etc. still resolves without
+  edits — it just picks up a light value when the system (or AppCompat-
+  Delegate override) is in day mode.
+-->
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- Background hierarchy -->
-    <color name="bg_dark">#0A0E14</color>
-    <color name="bg_surface">#111720</color>
-    <color name="bg_card">#161D2A</color>
-    <color name="bg_card_stroke">#1E2A3A</color>
-    <color name="bg_elevated">#1C2535</color>
-    <color name="bg_input">#0D1219</color>
+    <!-- Background hierarchy (LIGHT) -->
+    <color name="bg_dark">#F8FAFC</color>         <!-- page background -->
+    <color name="bg_surface">#FFFFFF</color>       <!-- elevated surface -->
+    <color name="bg_card">#F1F5F9</color>          <!-- card fill -->
+    <color name="bg_card_stroke">#CBD5E1</color>   <!-- card outline -->
+    <color name="bg_elevated">#E2E8F0</color>      <!-- deeper elevation -->
+    <color name="bg_input">#F1F5F9</color>         <!-- input field fill -->
 
-    <!-- Accent colors -->
-    <color name="accent_purple">#A78BFA</color>
-    <color name="accent_purple_dim">#1AA78BFA</color>
-    <color name="accent_green">#34D399</color>
-    <color name="accent_green_dim">#1A34D399</color>
-    <color name="accent_red">#F87171</color>
-    <color name="accent_red_dim">#1AF87171</color>
-    <color name="accent_blue">#60A5FA</color>
-    <color name="accent_amber">#FBBF24</color>
-    <color name="accent_cyan">#22D3EE</color>
+    <!-- Accent colors (darkened for AA contrast on light bg) -->
+    <color name="accent_purple">#7C3AED</color>
+    <color name="accent_purple_dim">#1A7C3AED</color>
+    <color name="accent_green">#059669</color>
+    <color name="accent_green_dim">#1A059669</color>
+    <color name="accent_red">#DC2626</color>
+    <color name="accent_red_dim">#1ADC2626</color>
+    <color name="accent_blue">#2563EB</color>
+    <color name="accent_amber">#D97706</color>
+    <color name="accent_cyan">#0891B2</color>
 
     <!-- Text colors -->
-    <color name="text_primary">#F1F5F9</color>
-    <color name="text_secondary">#64748B</color>
-    <color name="text_tertiary">#475569</color>
+    <color name="text_primary">#0F172A</color>     <!-- near-black -->
+    <color name="text_secondary">#475569</color>   <!-- slate -->
+    <color name="text_tertiary">#94A3B8</color>    <!-- muted slate -->
 
     <!-- Status bar -->
-    <color name="status_bar">#070A0F</color>
+    <color name="status_bar">#E2E8F0</color>
 </resources>

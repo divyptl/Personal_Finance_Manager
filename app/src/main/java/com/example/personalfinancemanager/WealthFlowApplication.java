@@ -36,11 +36,19 @@ public class WealthFlowApplication extends Application {
         // ready-to-use instance.
         ServiceLocator.initialize(this);
 
+        // Apply the persisted theme BEFORE any activity inflates — otherwise
+        // the launcher activity renders in the default mode and then flips.
+        ThemeController.applyFromPrefs(ServiceLocator.get(this).credentialManager());
+
         // Create notification channels (idempotent — safe to call every launch).
         NotificationHelper.createChannels(this);
 
         // Schedule the daily budget check worker (idempotent — ExistingPeriodicWorkPolicy.KEEP
         // ensures it doesn't duplicate if already enqueued).
         BudgetCheckWorker.enqueue(this);
+
+        // Daily price-threshold check against any user-configured price
+        // alerts. Also idempotent via KEEP policy.
+        PriceAlertWorker.enqueue(this);
     }
 }

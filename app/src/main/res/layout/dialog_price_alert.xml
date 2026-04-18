@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <EditText
+        android:id="@+id/inputTicker"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@drawable/bg_input"
+        android:hint="@string/hint_ticker"
+        android:inputType="textCapCharacters"
+        android:maxLines="1"
+        android:paddingHorizontal="12dp"
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/text_tertiary"
+        android:textSize="14sp" />
+
+    <EditText
+        android:id="@+id/inputLower"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_input"
+        android:hint="@string/hint_lower_bound"
+        android:inputType="numberDecimal"
+        android:paddingHorizontal="12dp"
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/text_tertiary"
+        android:textSize="14sp" />
+
+    <EditText
+        android:id="@+id/inputUpper"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_input"
+        android:hint="@string/hint_upper_bound"
+        android:inputType="numberDecimal"
+        android:paddingHorizontal="12dp"
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/text_tertiary"
+        android:textSize="14sp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="@string/label_price_alert_dialog_hint"
+        android:textColor="@color/text_secondary"
+        android:textSize="11sp" />
+
+</LinearLayout>

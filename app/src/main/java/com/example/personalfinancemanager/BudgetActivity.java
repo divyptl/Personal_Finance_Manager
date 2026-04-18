@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.snackbar.Snackbar;
 
 import java.util.HashMap;
 import java.util.List;
@@ -60,9 +61,7 @@ public class BudgetActivity extends AppCompatActivity {
                         .setTitle(getString(R.string.dialog_delete_budget_title, budget.getCategory()))
                         .setMessage(R.string.dialog_delete_budget_message)
                         .setPositiveButton(R.string.action_remove, (d, w) ->
-                                AppDatabase.databaseWriteExecutor.execute(() ->
-                                        AppDatabase.getDatabase(this).budgetDao()
-                                                .deleteBudget(budget.getCategory())))
+                                removeBudgetWithUndo(budget))
                         .setNegativeButton(R.string.action_cancel, null)
                         .show());
 
@@ -94,6 +93,27 @@ public class BudgetActivity extends AppCompatActivity {
 
         btnBack.setOnClickListener(v -> finish());
         fab.setOnClickListener(v -> showAddBudgetDialog());
+    }
+
+    /**
+     * Deletes the budget immediately and shows an Undo Snackbar. Tapping
+     * Undo re-inserts the exact row; if the snackbar times out the deletion
+     * is permanent. Matches the transaction-delete UX.
+     */
+    private void removeBudgetWithUndo(Budget budget) {
+        AppDatabase.databaseWriteExecutor.execute(() ->
+                AppDatabase.getDatabase(this).budgetDao()
+                        .deleteBudget(budget.getCategory()));
+
+        Snackbar sb = Snackbar.make(findViewById(android.R.id.content),
+                getString(R.string.toast_budget_removed, budget.getCategory()),
+                Snackbar.LENGTH_LONG);
+        sb.setAction(R.string.action_undo, v ->
+                AppDatabase.databaseWriteExecutor.execute(() ->
+                        AppDatabase.getDatabase(this).budgetDao()
+                                .insertOrUpdate(new Budget(
+                                        budget.getCategory(), budget.getMonthlyLimit()))));
+        sb.show();
     }
 
     private void loadSpending(List<Budget> budgets) {

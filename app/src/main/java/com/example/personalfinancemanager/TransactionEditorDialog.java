@@ -39,7 +39,12 @@ public class TransactionEditorDialog {
      * with {@link BudgetActivity}'s category list and the categories produced
      * by {@link SmsTransactionParser#categorize(String)}.
      */
-    private static final String[] CATEGORIES = {
+    /**
+     * Canonical category list. Must stay in sync with {@link SmsTransactionParser}.
+     * Exposed package-wide so the inline recategorize chip (see
+     * {@link TransactionAdapter}) can offer the same picker.
+     */
+    static final String[] CATEGORIES = {
             "Food & Dining", "Transport", "Shopping", "Groceries",
             "Bills & Utilities", "Health", "Entertainment", "Education",
             "Rent & Housing", "Investments", "Transfer", "Other"

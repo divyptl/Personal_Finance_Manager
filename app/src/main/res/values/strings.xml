@@ -172,6 +172,58 @@
     <string name="toast_csv_saved">Transactions exported</string>
     <string name="toast_csv_failed">Export failed: %1$s</string>
     <string name="toast_csv_empty">No transactions to export</string>
+    <string name="toast_all_deleted">All transactions deleted</string>
+    <string name="toast_all_restored">Transactions restored</string>
+
+    <!-- Month navigator -->
+    <string name="cd_prev_month">Previous month</string>
+    <string name="cd_next_month">Next month</string>
+
+    <!-- Re-auth gate -->
+    <string name="reauth_title">Confirm it\'s you</string>
+    <string name="reauth_subtitle">Authenticate to continue with this sensitive action.</string>
+
+    <!-- Theme toggle -->
+    <string name="label_theme">Theme</string>
+    <string name="theme_system">Follow system</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="menu_theme">Theme…</string>
+
+    <!-- Subscriptions / recurring-payment detection -->
+    <string name="label_subscriptions_title">Recurring Payments</string>
+    <string name="label_subscriptions_description">Detected automatically from your transaction history. Detection needs at least 2 matching charges with a regular cadence.</string>
+    <string name="label_monthly_outgo">Estimated monthly outgo</string>
+    <string name="label_no_subscriptions">No recurring payments detected</string>
+    <string name="label_no_subscriptions_hint">Subscriptions appear here once we see at least two charges from the same merchant at a regular interval.</string>
+    <string name="menu_subscriptions">Recurring payments</string>
+    <string name="subscription_cadence_count">%1$s · ×%2$d</string>
+    <string name="subscription_last_charge">last %1$s</string>
+    <plurals name="subscriptions_detected">
+        <item quantity="one">%d subscription detected</item>
+        <item quantity="other">%d subscriptions detected</item>
+    </plurals>
+
+    <!-- Onboarding carousel -->
+    <string name="action_skip">Skip</string>
+    <string name="action_next">Next</string>
+    <string name="action_get_started">Get started</string>
+    <string name="onboarding_slide1_title">Your money, clearly</string>
+    <string name="onboarding_slide1_body">WealthFlow gives you a single dashboard for your spending, income, investments, and budgets — no spreadsheets, no logins on each refresh.</string>
+    <string name="onboarding_slide2_title">Auto-logged from SMS</string>
+    <string name="onboarding_slide2_body">Bank SMS alerts are parsed on your device to auto-capture transactions. Nothing is uploaded. You can always add, edit, or delete entries manually.</string>
+    <string name="onboarding_slide3_title">Private by default</string>
+    <string name="onboarding_slide3_body">Broker credentials are stored encrypted behind the Android Keystore. Enable app lock to require fingerprint or PIN on every launch.</string>
+
+    <!-- Inline recategorize -->
+    <string name="dialog_pick_category_title">Change category</string>
+    <string name="toast_category_updated">Category updated</string>
+
+    <!-- Net-worth trend chart -->
+    <string name="label_net_worth_trend">Net Worth Trend</string>
+    <string name="label_net_worth">Net Worth</string>
+    <string name="label_net_worth_hint">Net worth history will appear here after we\'ve tracked at least two snapshots — keep using the app for a couple of days.</string>
+    <string name="cd_net_worth_chart">Line chart of net worth over time</string>
 
     <!-- App Lock -->
     <string name="lock_title">Unlock WealthFlow</string>
@@ -218,4 +270,49 @@
     <string name="cd_pie_chart">Pie chart of expenses by category</string>
     <string name="cd_line_chart">Line chart of monthly spending trends</string>
     <string name="cd_bar_chart">Bar chart of category spending by month</string>
+
+    <!-- Price Alerts (feature #9) -->
+    <string name="menu_price_alerts">Price alerts</string>
+    <string name="label_price_alerts_title">Price alerts</string>
+    <string name="label_price_alerts_description">We check prices once a day and notify you when a stock crosses a threshold. Each alert has a 24-hour cooldown to avoid spam.</string>
+    <string name="label_no_price_alerts">No alerts yet</string>
+    <string name="label_no_price_alerts_hint">Tap + to track a stock and get notified when it crosses a price you choose.</string>
+    <string name="cd_add_price_alert">Add a price alert</string>
+    <string name="cd_toggle_price_alert">Enable or disable this alert</string>
+    <string name="hint_ticker">Ticker (e.g. RELIANCE)</string>
+    <string name="hint_lower_bound">Notify below (optional)</string>
+    <string name="hint_upper_bound">Notify above (optional)</string>
+    <string name="label_price_alert_dialog_hint">Leave either field empty to disable that side. Set both to get alerted on either end.</string>
+    <string name="dialog_add_alert_title">New price alert</string>
+    <string name="dialog_edit_alert_title">Edit price alert</string>
+    <string name="dialog_delete_alert_title">Delete alert?</string>
+    <string name="dialog_delete_alert_message">Remove the price alert for %1$s? You can always add it again later.</string>
+    <string name="toast_ticker_required">Ticker is required.</string>
+    <string name="toast_bounds_required">Set at least one threshold.</string>
+    <string name="toast_bounds_inverted">Lower bound must be less than upper bound.</string>
+    <string name="format_bounds_both">\u20B9%1$.2f \u2014 \u20B9%2$.2f</string>
+    <string name="format_bounds_upper">Above \u20B9%1$.2f</string>
+    <string name="format_bounds_lower">Below \u20B9%1$.2f</string>
+    <string name="format_bounds_none">No thresholds set</string>
+    <string name="format_last_notified">Last notified %1$s</string>
+    <string name="label_never_notified">Never notified</string>
+
+    <!-- Re-auth subtitles + budget undo -->
+    <string name="reauth_subtitle_logout">Confirm it\u0027s you before disconnecting your broker.</string>
+    <string name="reauth_subtitle_portfolio">Confirm it\u0027s you to view holdings.</string>
+    <string name="toast_budget_removed">%1$s budget removed</string>
+
+    <!-- Theme toggle dialog title (menu_theme / theme_* live earlier in the file) -->
+    <string name="dialog_theme_title">Choose theme</string>
+    <string name="cd_delete_price_alert">Delete price alert</string>
+
+    <!-- Dashboard reorder -->
+    <string name="menu_reorder_cards">Reorder cards</string>
+    <string name="label_reorder_title">Reorder dashboard</string>
+    <string name="label_reorder_hint">Drag the handle on each card to change its position on the home screen.</string>
+    <string name="cd_drag_handle">Drag to reorder</string>
+    <string name="dashboard_card_balance">Balance / Net worth card</string>
+    <string name="dashboard_card_pie">Expense breakdown (pie)</string>
+    <string name="dashboard_card_actions">Quick actions</string>
+    <string name="dashboard_card_transactions">Recent transactions</string>
 </resources>

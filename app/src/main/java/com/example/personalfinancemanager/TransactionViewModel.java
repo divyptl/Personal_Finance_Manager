@@ -37,6 +37,10 @@ public class TransactionViewModel extends AndroidViewModel {
         mRepository.deleteAllTransactions();
     }
 
+    public void restoreAll(List<Transaction> transactions) {
+        mRepository.restoreAll(transactions);
+    }
+
 
     public androidx.lifecycle.LiveData<java.util.List<Transaction>> getTransactionsByMonth(long startMillis, long endMillis) {
         return mRepository.getTransactionsByMonth(startMillis, endMillis);

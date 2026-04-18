@@ -10,6 +10,10 @@ public interface TransactionDao {
     @Insert
     void insert(Transaction transaction);
 
+    /** Bulk insert used by the delete-all "Undo" restore path. */
+    @Insert
+    void insertAll(List<Transaction> transactions);
+
     @Query("SELECT * FROM transaction_table ORDER BY timestamp DESC")
     LiveData<List<Transaction>> getAllTransactions();
 

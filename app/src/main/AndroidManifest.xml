@@ -47,6 +47,22 @@
             android:name=".AnalyticsActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".SubscriptionActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".OnboardingActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".PriceAlertActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".DashboardOrderActivity"
+            android:exported="false" />
+
         <!--
             Hosts the Upstox OAuth2 login page in a WebView and intercepts
             the redirect URI before it ever leaves the app. No custom scheme

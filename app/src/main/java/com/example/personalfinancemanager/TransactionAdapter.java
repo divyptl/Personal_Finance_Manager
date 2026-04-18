@@ -22,6 +22,11 @@ public class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.
         void onLongClick(Transaction transaction);
     }
 
+    /** Fired when the category chip is tapped — host shows a category picker. */
+    public interface OnCategoryClickListener {
+        void onCategoryClick(Transaction transaction);
+    }
+
     // We keep two lists: the full source set last pushed from LiveData, and
     // the filtered list that backs the RecyclerView. Keeping them separate
     // means a new LiveData emission (e.g. a fresh SMS transaction landed)
@@ -30,9 +35,14 @@ public class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.
     private List<Transaction> transactions    = new ArrayList<>();
     private String searchQuery = "";
     private OnTransactionLongClickListener longClickListener;
+    private OnCategoryClickListener categoryClickListener;
 
     public void setOnLongClickListener(OnTransactionLongClickListener listener) {
         this.longClickListener = listener;
+    }
+
+    public void setOnCategoryClickListener(OnCategoryClickListener listener) {
+        this.categoryClickListener = listener;
     }
 
     @NonNull
@@ -71,6 +81,15 @@ public class TransactionAdapter extends RecyclerView.Adapter<TransactionAdapter.
                 return true;
             }
             return false;
+        });
+
+        // Inline recategorize: tap the category chip to open a picker. Gives
+        // users a one-tap escape hatch when the SMS parser's heuristic guess
+        // is wrong, without forcing them through the full edit dialog.
+        holder.tvCategory.setOnClickListener(v -> {
+            if (categoryClickListener != null) {
+                categoryClickListener.onCategoryClick(current);
+            }
         });
     }
 

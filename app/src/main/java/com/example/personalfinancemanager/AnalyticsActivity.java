@@ -43,6 +43,8 @@ import java.util.Set;
 public class AnalyticsActivity extends AppCompatActivity {
 
     private LineChart lineChart;
+    private LineChart netWorthChart;
+    private android.widget.TextView netWorthHint;
     private BarChart barChart;
     private View emptyState;
 
@@ -66,16 +68,74 @@ public class AnalyticsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_analytics);
 
         ImageButton btnBack = findViewById(R.id.btnBack);
-        lineChart = findViewById(R.id.lineChart);
-        barChart = findViewById(R.id.barChart);
-        emptyState = findViewById(R.id.emptyState);
+        lineChart     = findViewById(R.id.lineChart);
+        netWorthChart = findViewById(R.id.netWorthChart);
+        netWorthHint  = findViewById(R.id.netWorthHint);
+        barChart      = findViewById(R.id.barChart);
+        emptyState    = findViewById(R.id.emptyState);
 
         btnBack.setOnClickListener(v -> finish());
 
         styleLineChart();
+        styleLineChart(netWorthChart);
         styleBarChart();
 
+        // Force a fresh snapshot on entry so the chart always shows "now" as
+        // the latest point (throttle inside the tracker still applies).
+        NetWorthTracker.maybeSnapshot(this);
+
         loadData();
+        loadNetWorthTrend();
+    }
+
+    private void loadNetWorthTrend() {
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            // Last 365 days of snapshots.
+            long since = System.currentTimeMillis() - 365L * 24 * 60 * 60 * 1000;
+            final List<NetWorthSnapshot> snaps = AppDatabase.getDatabase(this)
+                    .netWorthSnapshotDao().getSinceSync(since);
+
+            runOnUiThread(() -> populateNetWorthChart(snaps));
+        });
+    }
+
+    private void populateNetWorthChart(List<NetWorthSnapshot> snaps) {
+        if (snaps == null || snaps.size() < 2) {
+            // With 0 or 1 data points a line has no meaning — show a hint and
+            // hide the chart so we don't render an empty frame.
+            netWorthChart.setVisibility(View.GONE);
+            netWorthHint.setVisibility(View.VISIBLE);
+            return;
+        }
+        netWorthHint.setVisibility(View.GONE);
+        netWorthChart.setVisibility(View.VISIBLE);
+
+        List<Entry> entries = new ArrayList<>(snaps.size());
+        List<String> labels = new ArrayList<>(snaps.size());
+        java.text.SimpleDateFormat sdf =
+                new java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault());
+        for (int i = 0; i < snaps.size(); i++) {
+            NetWorthSnapshot s = snaps.get(i);
+            entries.add(new Entry(i, (float) s.getNetWorth()));
+            labels.add(sdf.format(new java.util.Date(s.getTimestamp())));
+        }
+
+        LineDataSet ds = new LineDataSet(entries, getString(R.string.label_net_worth));
+        ds.setColor(ContextCompat.getColor(this, R.color.accent_purple));
+        ds.setCircleColor(ContextCompat.getColor(this, R.color.accent_purple));
+        ds.setLineWidth(2f);
+        ds.setCircleRadius(3f);
+        ds.setDrawValues(false);
+        ds.setMode(LineDataSet.Mode.CUBIC_BEZIER);
+        // Subtle fill under the line for a trend-y feel.
+        ds.setDrawFilled(true);
+        ds.setFillColor(ContextCompat.getColor(this, R.color.accent_purple));
+        ds.setFillAlpha(40);
+
+        netWorthChart.setData(new LineData(ds));
+        netWorthChart.getXAxis().setValueFormatter(new IndexAxisValueFormatter(labels));
+        netWorthChart.getXAxis().setLabelCount(Math.min(labels.size(), 6));
+        netWorthChart.invalidate();
     }
 
     // ==================== DATA LOADING ====================
@@ -224,32 +284,36 @@ public class AnalyticsActivity extends AppCompatActivity {
     // ==================== CHART STYLING ====================
 
     private void styleLineChart() {
-        lineChart.getDescription().setEnabled(false);
-        lineChart.setDrawGridBackground(false);
-        lineChart.setTouchEnabled(true);
-        lineChart.setDragEnabled(true);
-        lineChart.setScaleEnabled(false);
-        lineChart.setExtraBottomOffset(8f);
+        styleLineChart(lineChart);
+    }
+
+    private void styleLineChart(LineChart chart) {
+        chart.getDescription().setEnabled(false);
+        chart.setDrawGridBackground(false);
+        chart.setTouchEnabled(true);
+        chart.setDragEnabled(true);
+        chart.setScaleEnabled(false);
+        chart.setExtraBottomOffset(8f);
 
         int textColor = ContextCompat.getColor(this, R.color.text_secondary);
 
-        XAxis xAxis = lineChart.getXAxis();
+        XAxis xAxis = chart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setTextColor(textColor);
         xAxis.setTextSize(10f);
         xAxis.setDrawGridLines(false);
         xAxis.setGranularity(1f);
 
-        YAxis leftAxis = lineChart.getAxisLeft();
+        YAxis leftAxis = chart.getAxisLeft();
         leftAxis.setTextColor(textColor);
         leftAxis.setTextSize(10f);
         leftAxis.setDrawGridLines(true);
         leftAxis.setGridColor(Color.parseColor("#1E2A3A"));
-        leftAxis.setAxisMinimum(0f);
+        // Net worth can legitimately go negative; don't clamp.
 
-        lineChart.getAxisRight().setEnabled(false);
+        chart.getAxisRight().setEnabled(false);
 
-        Legend legend = lineChart.getLegend();
+        Legend legend = chart.getLegend();
         legend.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
         legend.setTextSize(11f);
         legend.setHorizontalAlignment(Legend.LegendHorizontalAlignment.CENTER);

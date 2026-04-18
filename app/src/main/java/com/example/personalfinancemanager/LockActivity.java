@@ -64,6 +64,18 @@ public class LockActivity extends AppCompatActivity {
 
         CredentialManager cm = new CredentialManager(this);
 
+        // First-run: show the onboarding carousel before anything else.
+        // OnboardingActivity marks the flag complete and relaunches LockActivity,
+        // at which point this check short-circuits.
+        if (!cm.isOnboardingCompleted()) {
+            Intent onboarding = new Intent(this, OnboardingActivity.class);
+            onboarding.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(onboarding);
+            finish();
+            overridePendingTransition(0, 0);
+            return;
+        }
+
         // If the user hasn't opted in, or the device can't actually do biometrics,
         // skip this activity entirely — we must never block a user out of their
         // own data over a flaky sensor.
@@ -102,6 +114,9 @@ public class LockActivity extends AppCompatActivity {
                     public void onAuthenticationSucceeded(
                             @NonNull BiometricPrompt.AuthenticationResult result) {
                         sLastAuthenticatedAt = System.currentTimeMillis();
+                        // Propagate to the shared gate so screens that re-prompt
+                        // on sensitive actions respect the grace window.
+                        BiometricGate.markAuthenticated();
                         launchMain();
                     }
 

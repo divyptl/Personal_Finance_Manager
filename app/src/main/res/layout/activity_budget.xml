@@ -1,85 +1,91 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_dark"
-    android:fitsSystemWindows="true"
-    android:orientation="vertical">
+    android:fitsSystemWindows="true">
 
-    <!-- TOOLBAR -->
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:paddingHorizontal="12dp">
-
-        <ImageButton
-            android:id="@+id/btnBack"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_centerVertical="true"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/cd_back"
-            android:src="@android:drawable/ic_menu_revert"
-            app:tint="@color/text_primary" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
-            android:fontFamily="sans-serif-medium"
-            android:text="@string/label_budget_title"
-            android:textColor="@color/text_primary"
-            android:textSize="18sp" />
-    </RelativeLayout>
-
-    <!-- INFO TEXT -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingHorizontal="20dp"
-        android:paddingBottom="8dp"
-        android:text="@string/label_budget_description"
-        android:textColor="@color/text_secondary"
-        android:textSize="13sp" />
-
-    <!-- BUDGET LIST -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerBudgets"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:clipToPadding="false"
-        android:paddingHorizontal="12dp"
-        android:paddingBottom="80dp" />
-
-    <!-- EMPTY STATE -->
     <LinearLayout
-        android:id="@+id/emptyState"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:visibility="gone">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
+        <!-- TOOLBAR -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:paddingHorizontal="12dp">
+
+            <ImageButton
+                android:id="@+id/btnBack"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_centerVertical="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_back"
+                android:src="@android:drawable/ic_menu_revert"
+                app:tint="@color/text_primary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/label_budget_title"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp" />
+        </RelativeLayout>
+
+        <!-- INFO TEXT -->
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/label_no_budgets"
+            android:paddingHorizontal="20dp"
+            android:paddingBottom="8dp"
+            android:text="@string/label_budget_description"
             android:textColor="@color/text_secondary"
-            android:textSize="15sp" />
+            android:textSize="13sp" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/label_no_budgets_hint"
-            android:textColor="@color/text_tertiary"
-            android:textSize="12sp" />
+        <!-- BUDGET LIST -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerBudgets"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingHorizontal="12dp"
+            android:paddingBottom="80dp" />
+
+        <!-- EMPTY STATE -->
+        <LinearLayout
+            android:id="@+id/emptyState"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/label_no_budgets"
+                android:textColor="@color/text_secondary"
+                android:textSize="15sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/label_no_budgets_hint"
+                android:textColor="@color/text_tertiary"
+                android:textSize="12sp" />
+        </LinearLayout>
     </LinearLayout>
 
-    <!-- FAB -->
+    <!-- FAB (CoordinatorLayout child so Snackbar auto-lifts it) -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabAddBudget"
         android:layout_width="wrap_content"
@@ -92,4 +98,4 @@
         app:backgroundTint="@color/accent_purple"
         app:tint="@color/white" />
 
-</LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

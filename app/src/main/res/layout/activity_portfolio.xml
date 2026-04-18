@@ -235,4 +235,19 @@
         app:backgroundTint="@color/accent_purple"
         app:tint="@color/bg_dark" />
 
+    <!--
+        Full-screen opaque scrim covering holdings until the user
+        re-authenticates. Shown only when app-lock is on AND the last
+        auth was more than BiometricGate.DEFAULT_GRACE_MS ago.
+    -->
+    <View
+        android:id="@+id/reauthScrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/bg_dark"
+        android:clickable="true"
+        android:focusable="true"
+        android:importantForAccessibility="no"
+        android:visibility="gone" />
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

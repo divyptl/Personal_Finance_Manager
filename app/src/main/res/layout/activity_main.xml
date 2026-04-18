@@ -90,14 +90,39 @@
                     </LinearLayout>
                 </RelativeLayout>
 
-                <!-- MONTH SELECTOR -->
-                <Spinner
-                    android:id="@+id/spinnerMonth"
+                <!-- MONTH SELECTOR with prev/next arrows -->
+                <LinearLayout
                     android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:layout_marginStart="20dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
                     android:layout_marginTop="8dp"
-                    android:backgroundTint="@color/accent_purple" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageButton
+                        android:id="@+id/btnPrevMonth"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/cd_prev_month"
+                        android:src="@android:drawable/ic_media_previous"
+                        app:tint="@color/accent_purple" />
+
+                    <Spinner
+                        android:id="@+id/spinnerMonth"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:backgroundTint="@color/accent_purple" />
+
+                    <ImageButton
+                        android:id="@+id/btnNextMonth"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/cd_next_month"
+                        android:src="@android:drawable/ic_media_next"
+                        app:tint="@color/accent_purple" />
+                </LinearLayout>
 
                 <!-- SWIPEABLE BALANCE CARD -->
                 <LinearLayout
@@ -107,6 +132,9 @@
                     android:layout_marginHorizontal="16dp"
                     android:layout_marginTop="12dp"
                     android:background="@drawable/bg_balance_card"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="@string/label_total_expenses"
                     android:orientation="vertical"
                     android:padding="22dp">
 
@@ -149,13 +177,14 @@
                             android:textSize="10sp" />
                     </RelativeLayout>
 
-                    <!-- Page indicator dots -->
+                    <!-- Page indicator dots (decorative — hidden from TalkBack) -->
                     <LinearLayout
                         android:id="@+id/dotIndicator"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:gravity="center"
+                        android:importantForAccessibility="no"
                         android:orientation="horizontal">
 
                         <View
@@ -189,8 +218,9 @@
                     android:layout_marginTop="4dp"
                     android:contentDescription="@string/cd_pie_chart" />
 
-                <!-- ACTION BUTTONS ROW -->
+                <!-- ACTION BUTTONS ROW (reorderable dashboard card) -->
                 <LinearLayout
+                    android:id="@+id/sectionActions"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="16dp"
@@ -255,6 +285,15 @@
                             android:textSize="11sp" />
                     </LinearLayout>
                 </LinearLayout>
+
+                <!-- Reorderable dashboard card: Recent Transactions section
+                     (label + search + list + empty state wrapped together so
+                     DashboardOrderController can move them as a unit). -->
+                <LinearLayout
+                    android:id="@+id/sectionTransactions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
 
                 <!-- RECENT TRANSACTIONS LABEL -->
                 <TextView
@@ -336,6 +375,8 @@
                         android:textColor="@color/accent_purple"
                         android:textSize="12sp" />
                 </LinearLayout>
+                </LinearLayout>
+                <!-- /sectionTransactions -->
 
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>

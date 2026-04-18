@@ -68,6 +68,15 @@ public class PortfolioActivity extends AppCompatActivity {
                 }
             });
 
+    /**
+     * Skip the Portfolio re-auth prompt when we just resumed after the system
+     * stole focus for our own BiometricPrompt. Without this flag the prompt
+     * fires, succeeds, onResume runs, we see ourselves as "un-authed" (the
+     * prompt success callback runs AFTER onResume on some OEMs) and re-prompt
+     * in a loop.
+     */
+    private boolean authInFlight = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -77,6 +86,8 @@ public class PortfolioActivity extends AppCompatActivity {
         credentialManager = services.credentialManager();
         brokerApi = services.brokerApi();
         upstoxBrokerApi = services.upstoxBrokerApi();
+
+        gatePortfolioEntry();
 
         // Link UI
         tvTotalInvested = findViewById(R.id.tvTotalInvested);
@@ -232,11 +243,7 @@ public class PortfolioActivity extends AppCompatActivity {
                     .setTitle(R.string.dialog_account_title)
                     .setMessage(getString(R.string.dialog_account_message,
                             credentialManager.getClientCode()))
-                    .setPositiveButton(R.string.action_logout, (d, w) -> {
-                        brokerApi.logout();
-                        credentialManager.clear();
-                        toast(R.string.toast_logged_out);
-                    })
+                    .setPositiveButton(R.string.action_logout, (d, w) -> confirmLogoutBroker())
                     .setNeutralButton(R.string.action_delete_data, (d, w) -> confirmDeleteAllData())
                     .setNegativeButton(R.string.action_cancel, null)
                     .show();
@@ -246,11 +253,80 @@ public class PortfolioActivity extends AppCompatActivity {
     }
 
     /**
+     * Re-prompts for biometrics before showing raw holdings when app-lock is
+     * enabled and the last authentication is older than the grace window.
+     * Covers holdings with a full-screen opaque scrim until success; cancels
+     * bounce back to MainActivity via {@link #finish()}.
+     */
+    private void gatePortfolioEntry() {
+        View scrim = findViewById(R.id.reauthScrim);
+        if (credentialManager == null || !credentialManager.isBiometricLockEnabled()) {
+            if (scrim != null) scrim.setVisibility(View.GONE);
+            return;
+        }
+        if (BiometricGate.hasRecentAuth(BiometricGate.DEFAULT_GRACE_MS)) {
+            if (scrim != null) scrim.setVisibility(View.GONE);
+            return;
+        }
+        if (authInFlight) return;
+        authInFlight = true;
+        if (scrim != null) scrim.setVisibility(View.VISIBLE);
+
+        BiometricGate.require(this,
+                getString(R.string.reauth_title),
+                getString(R.string.reauth_subtitle_portfolio),
+                () -> {
+                    authInFlight = false;
+                    scrim.setVisibility(View.GONE);
+                },
+                () -> {
+                    // Cancel / error — exit rather than sit behind the scrim.
+                    authInFlight = false;
+                    finish();
+                });
+    }
+
+    /**
+     * Biometric-gated broker logout. A bystander with an unlocked phone
+     * shouldn't be able to sever the broker link (and thereby disrupt any
+     * live price alerts / net-worth tracking) without re-auth.
+     */
+    private void confirmLogoutBroker() {
+        Runnable doLogout = () -> {
+            brokerApi.logout();
+            credentialManager.clear();
+            toast(R.string.toast_logged_out);
+        };
+        if (credentialManager != null && credentialManager.isBiometricLockEnabled()) {
+            BiometricGate.require(this,
+                    getString(R.string.reauth_title),
+                    getString(R.string.reauth_subtitle_logout),
+                    doLogout::run);
+        } else {
+            doLogout.run();
+        }
+    }
+
+    /**
      * Required by Google Play account-deletion policy: users must be able to
      * remove all locally stored personal data (transactions, holdings,
      * credentials) without uninstalling the app.
      */
     private void confirmDeleteAllData() {
+        // Re-auth gate — delete-all-data is irreversible. Require biometric
+        // confirmation when app lock is on to prevent a bystander with an
+        // unlocked phone from wiping user data.
+        if (credentialManager != null && credentialManager.isBiometricLockEnabled()) {
+            BiometricGate.require(this,
+                    getString(R.string.reauth_title),
+                    getString(R.string.reauth_subtitle),
+                    this::showDeleteAllDataDialog);
+        } else {
+            showDeleteAllDataDialog();
+        }
+    }
+
+    private void showDeleteAllDataDialog() {
         new AlertDialog.Builder(this)
                 .setTitle(R.string.dialog_delete_data_title)
                 .setMessage(R.string.dialog_delete_data_message)
@@ -261,6 +337,8 @@ public class PortfolioActivity extends AppCompatActivity {
                         AppDatabase db = AppDatabase.getDatabase(this);
                         db.transactionDao().deleteAllTransactions();
                         db.stockDao().deleteAll();
+                        db.netWorthSnapshotDao().deleteAll();
+                        db.priceAlertDao().deleteAll();
                         runOnUiThread(() -> {
                             toast(R.string.toast_data_deleted);
                             finish();

@@ -26,8 +26,12 @@ import java.util.Locale;
  */
 public final class NotificationHelper {
 
-    private static final String CHANNEL_EXCEEDED = "budget_exceeded";
-    private static final String CHANNEL_WARNING  = "budget_warning";
+    private static final String CHANNEL_EXCEEDED     = "budget_exceeded";
+    private static final String CHANNEL_WARNING      = "budget_warning";
+    private static final String CHANNEL_PRICE_ALERT  = "price_alert";
+
+    /** Crossing direction for {@link #notifyPriceAlert}. */
+    public enum Direction { ABOVE, BELOW }
 
     /** Must be called once from {@link WealthFlowApplication#onCreate()}. */
     public static void createChannels(Context context) {
@@ -50,8 +54,49 @@ public final class NotificationHelper {
         );
         warning.setDescription("Daily warnings when you approach a category spending limit.");
 
+        NotificationChannel priceAlert = new NotificationChannel(
+                CHANNEL_PRICE_ALERT,
+                "Price Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+        );
+        priceAlert.setDescription("Fires when a tracked stock crosses your configured price threshold.");
+
         nm.createNotificationChannel(exceeded);
         nm.createNotificationChannel(warning);
+        nm.createNotificationChannel(priceAlert);
+    }
+
+    /**
+     * Fires a "price threshold crossed" notification.
+     *
+     * @param ticker     e.g. "RELIANCE"
+     * @param price      the latest traded price
+     * @param threshold  the configured bound that was crossed
+     * @param direction  whether price went ABOVE the upper bound or BELOW the lower bound
+     */
+    public static void notifyPriceAlert(Context context, String ticker, double price,
+                                        double threshold, Direction direction) {
+        if (!canPost(context)) return;
+
+        String title;
+        String body;
+        if (direction == Direction.ABOVE) {
+            title = String.format(Locale.getDefault(),
+                    "%s hit \u20B9%.2f", ticker, price);
+            body = String.format(Locale.getDefault(),
+                    "%s is now \u20B9%.2f — above your alert at \u20B9%.2f.",
+                    ticker, price, threshold);
+        } else {
+            title = String.format(Locale.getDefault(),
+                    "%s dropped to \u20B9%.2f", ticker, price);
+            body = String.format(Locale.getDefault(),
+                    "%s is now \u20B9%.2f — below your alert at \u20B9%.2f.",
+                    ticker, price, threshold);
+        }
+
+        int notifId = ("price_" + ticker + "_" + direction.name()).hashCode();
+        post(context, CHANNEL_PRICE_ALERT, notifId, title, body,
+                NotificationCompat.PRIORITY_HIGH);
     }
 
     /**

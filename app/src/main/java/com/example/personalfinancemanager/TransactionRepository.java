@@ -51,4 +51,20 @@ public class TransactionRepository {
         AppDatabase.databaseWriteExecutor.execute(() ->
                 mTransactionDao.deleteTransactionById(id));
     }
+
+    /** Bulk restore — re-inserts rows with fresh primary keys (Room ignores old id). */
+    public void restoreAll(List<Transaction> transactions) {
+        if (transactions == null || transactions.isEmpty()) return;
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            // Clear ids so Room autogenerates fresh ones on insert.
+            List<Transaction> fresh = new java.util.ArrayList<>(transactions.size());
+            for (Transaction t : transactions) {
+                Transaction copy = new Transaction(
+                        t.getMessage(), t.getAmount(), t.getTimestamp(),
+                        t.getType(), t.getCategory());
+                fresh.add(copy);
+            }
+            mTransactionDao.insertAll(fresh);
+        });
+    }
 }
