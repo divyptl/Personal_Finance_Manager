@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(ls /c/Users/acer/AndroidStudioProjects/PersonalFinanceManager/.git/*.lock)",
-      "Bash(ls /c/Users/acer/AndroidStudioProjects/PersonalFinanceManager/.git/worktrees/dazzling-blackburn/*.lock)"
-    ]
-  }
-}
